@@ -1,0 +1,4 @@
+python-dotenv
+nova-act
+boto3
+requests
