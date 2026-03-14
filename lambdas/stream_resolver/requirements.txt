@@ -1,0 +1,2 @@
+# No external dependencies needed — uses only stdlib (urllib, json)
+# This file exists for consistency with other Lambda handler directories

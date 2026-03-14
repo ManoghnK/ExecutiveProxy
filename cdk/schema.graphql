@@ -1,0 +1,66 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+type MeetingState {
+  meeting_id: ID!
+  timestamp: String!
+  speaker: String
+  transcript_chunk: String
+  intent_label: String
+  action_triggered: Boolean
+}
+
+type ActionLog {
+  meeting_id: ID!
+  action_id: ID!
+  action_type: String!
+  status: String!
+  payload: String
+  result: String
+  created_at: String!
+}
+
+type MeetingStateConnection {
+  items: [MeetingState]
+}
+
+type ActionLogConnection {
+  items: [ActionLog]
+}
+
+type Query {
+  getMeeting(meeting_id: ID!): MeetingStateConnection
+  getActions(meeting_id: ID!): ActionLogConnection
+}
+
+type Mutation {
+  onTranscriptUpdate(
+    meeting_id: ID!
+    timestamp: String!
+    speaker: String
+    transcript_chunk: String
+    intent_label: String
+    action_triggered: Boolean
+  ): MeetingState
+
+  onActionComplete(
+    meeting_id: ID!
+    action_id: ID!
+    action_type: String!
+    status: String!
+    payload: String
+    result: String
+    created_at: String!
+  ): ActionLog
+}
+
+type Subscription {
+  subscribeToMeeting(meeting_id: ID!): MeetingState
+    @aws_subscribe(mutations: ["onTranscriptUpdate"])
+
+  subscribeToActions(meeting_id: ID!): ActionLog
+    @aws_subscribe(mutations: ["onActionComplete"])
+}

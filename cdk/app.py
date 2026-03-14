@@ -2,6 +2,7 @@
 import aws_cdk as cdk
 from stacks.dynamo_stack import DynamoStack
 from stacks.lambda_stack import LambdaStack
+from stacks.appsync_stack import AppSyncStack
 
 app = cdk.App()
 
@@ -17,4 +18,13 @@ lambdas = LambdaStack(
     action_table=dynamo.action_table
 )
 
+appsync = AppSyncStack(
+    app,
+    "ExecProxyAppSync",
+    env=env,
+    meeting_table=dynamo.meeting_table,
+    action_table=dynamo.action_table,
+)
+
 app.synth()
+
