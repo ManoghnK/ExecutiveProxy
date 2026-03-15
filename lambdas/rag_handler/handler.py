@@ -8,7 +8,8 @@ import boto3
 import os
 import uuid
 import datetime
-from pinecone import Pinecone
+import urllib.request
+import urllib.parse
 
 # ── Config ────────────────────────────────────────────────────────────────────
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
@@ -25,10 +26,24 @@ REASONING_MODEL_ID = "amazon.nova-pro-v1:0"
 bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 
+_INDEX_HOST_CACHE = None
+
+def get_pinecone_host():
+    global _INDEX_HOST_CACHE
+    if _INDEX_HOST_CACHE:
+        return _INDEX_HOST_CACHE
+
+    req = urllib.request.Request(
+        f"https://api.pinecone.io/indexes/{PINECONE_INDEX_NAME}",
+        headers={"Api-Key": PINECONE_API_KEY}
+    )
+    with urllib.request.urlopen(req, timeout=10) as response:
+        data = json.loads(response.read().decode("utf-8"))
+        _INDEX_HOST_CACHE = data.get("host")
+        return _INDEX_HOST_CACHE
+
 def get_embedding(text: str) -> list[float]:
-    """Generate embedding using Titan v2 via Bedrock.
-    Must match the model used in seed_pinecone.py — both must be identical.
-    """
+    """Generate embedding using Titan v2 via Bedrock."""
     body = json.dumps({
         "inputText": text,
         "dimensions": 1024,
@@ -44,27 +59,47 @@ def get_embedding(text: str) -> list[float]:
     return result["embedding"]
 
 def query_pinecone(vector: list[float], top_k: int = 5) -> list[str]:
-    """Retrieve relevant policy chunks from Pinecone."""
+    """Retrieve relevant policy chunks from Pinecone using REST."""
     if not PINECONE_API_KEY:
         print("WARNING: PINECONE_API_KEY not set. Returning empty context.")
         return []
         
-    pc = Pinecone(api_key=PINECONE_API_KEY)
-    index = pc.Index(PINECONE_INDEX_NAME)
-    
-    results = index.query(
-        vector=vector,
-        top_k=top_k,
-        include_metadata=True
+    try:
+        host = get_pinecone_host()
+    except Exception as e:
+        print(f"Error fetching index host: {e}")
+        return []
+
+    payload = json.dumps({
+        "vector": vector,
+        "topK": top_k,
+        "includeMetadata": True
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        f"https://{host}/query",
+        data=payload,
+        headers={
+            "Api-Key": PINECONE_API_KEY,
+            "Content-Type": "application/json"
+        }
     )
+    
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            results = json.loads(response.read().decode("utf-8"))
+    except Exception as e:
+        print(f"Pinecone query failed: {e}")
+        return []
     
     # Format context: "Source: [Title] \n Text: [Chunk]"
     context_chunks = []
-    for match in results["matches"]:
-        meta = match["metadata"]
+    for match in results.get("matches", []):
+        meta = match.get("metadata", {})
         text = meta.get("text", "")
         source = meta.get("source", "Unknown")
-        context_chunks.append(f"Source: {source}\nContent: {text}")
+        score = match.get("score", 0.0)
+        context_chunks.append(f"Source: {source} (Score: {score:.3f})\nContent: {text}")
         
     return context_chunks
 

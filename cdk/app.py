@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(env_path)
+
 import aws_cdk as cdk
 from stacks.dynamo_stack import DynamoStack
 from stacks.lambda_stack import LambdaStack

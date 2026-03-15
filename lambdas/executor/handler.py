@@ -10,7 +10,8 @@ import json
 import uuid
 import datetime
 import base64
-import requests
+import urllib.request
+import urllib.parse
 import boto3
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -208,9 +209,9 @@ def execute_jira_rest_api(tool_input: dict) -> dict:
         }
         
         print(f"Calling Jira REST API: {url}")
-        resp = requests.post(url, headers=headers, json=payload)
-        resp.raise_for_status()
-        return resp.json()
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+        with urllib.request.urlopen(req) as response:
+            return json.loads(response.read().decode("utf-8"))
         
     except Exception as e:
         return {"error": str(e)}
