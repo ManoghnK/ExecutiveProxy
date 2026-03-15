@@ -193,7 +193,8 @@ APPSYNC_API_KEY=            # auto-set by CDK (ExecProxyAppSync stack output)
 11. Nova 2 Sonic uses `aws_sdk_bedrock_runtime` SDK (not boto3) — bidirectional streaming requires the experimental Python SDK
 12. Transcribe handler uses chunked Lambda model — frontend sends 3-10s audio chunks per invocation; each creates a Nova Sonic session, transcribes, writes DynamoDB, triggers classifier
 13. Nova Act cannot run inside Lambda — requires a real browser (Playwright/Chrome). Runs locally alongside Electron frontend or on EC2/ECS
-14. Jira auth uses persistent `user_data_dir` — one-time `--setup-auth` saves the browser session, subsequent runs reuse it with `clone_user_data_dir=True`
+14. Jira auth uses persistent `user_data_dir` — one-time `--setup-auth` saves the browser session, subsequent runs reuse it with `clone_user_data_dir=False`
+14b. Ensure that `use_default_chrome_browser=True` is NOT used on Windows setups as it raises a `NotImplementedError` via Nova Act SDK since it is only currently supported on macOS.
 15. Executor has `NOVA_ACT_ENABLED` toggle — when true, routes to Nova Act agent first with REST API fallback; when false (Lambda default), uses REST API only
 16. Calendar and Jira agents share the same `user_data_dir` — single `--setup-auth` authenticates both services if done from the same browser profile
 17. AppSync uses API_KEY auth — simplest for hackathon; IAM/Cognito for production

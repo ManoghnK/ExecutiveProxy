@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+executiveproxy-81469e743715.json
 
 # Python
 venv/

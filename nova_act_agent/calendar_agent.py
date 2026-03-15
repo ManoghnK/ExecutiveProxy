@@ -41,18 +41,14 @@ if not logger.handlers:
 NOVA_ACT_API_KEY = os.environ.get("NOVA_ACT_API_KEY")
 CALENDAR_URL = "https://calendar.google.com"
 
-# Persistent browser session directory (shared with jira_agent)
-DEFAULT_USER_DATA_DIR = os.environ.get(
-    "NOVA_ACT_USER_DATA_DIR",
-    str(Path.home() / ".executive-proxy" / "nova-act-profile"),
-)
+# Persistent browser profile directory (shared with jira_agent)
+BROWSER_PROFILE = Path(__file__).parent / "browser_profile"
+BROWSER_PROFILE.mkdir(exist_ok=True)
 
 
 def _get_user_data_dir() -> str:
     """Get or create the persistent browser data directory."""
-    path = DEFAULT_USER_DATA_DIR
-    os.makedirs(path, exist_ok=True)
-    return path
+    return str(BROWSER_PROFILE)
 
 
 def _parse_iso_to_display(iso_str: str) -> dict:
@@ -179,7 +175,7 @@ class CalendarUIAgent:
                 nova_act_api_key=self.api_key,
                 headless=self.headless,
                 user_data_dir=self.user_data_dir,
-                clone_user_data_dir=True,  # Safe for parallel runs
+                clone_user_data_dir=False,  # ← CRITICAL: Reuse profile instead of cloning
             ) as nova:
 
                 # ── Step 1: Wait for calendar to load ────────────────────────

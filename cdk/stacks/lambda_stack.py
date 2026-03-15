@@ -21,17 +21,7 @@ class LambdaStack(Stack):
             "TranscribeHandler",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="handler.handler",
-            code=_lambda.Code.from_asset(
-                "../lambdas/transcribe_handler",
-                bundling=BundlingOptions(
-                    image=_lambda.Runtime.PYTHON_3_12.bundling_image,
-                    command=[
-                        "bash", "-c",
-                        "pip install -r requirements.txt -t /asset-output && "
-                        "cp -au . /asset-output"
-                    ],
-                ),
-            ),
+            code=_lambda.Code.from_asset("../lambdas/transcribe_handler"),
             timeout=Duration.seconds(120),  # Streaming + DynamoDB + async invoke
             memory_size=512,  # Extra memory for audio processing
             environment={

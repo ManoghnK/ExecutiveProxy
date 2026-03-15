@@ -1,0 +1,6 @@
+2026/03/15-02:28:00.928 4348 Reusing MANIFEST D:\Projects\ExecutiveProxy\nova_act_agent\browser_profile\Default\IndexedDB\https_hrudhvik.atlassian.net_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/15-02:28:00.928 4348 Recovering log #3
+2026/03/15-02:28:00.934 4348 Reusing old log D:\Projects\ExecutiveProxy\nova_act_agent\browser_profile\Default\IndexedDB\https_hrudhvik.atlassian.net_0.indexeddb.leveldb/000003.log 
+2026/03/15-02:29:06.123 5c6c Level-0 table #5: started
+2026/03/15-02:29:06.141 5c6c Level-0 table #5: 1892205 bytes OK
+2026/03/15-02:29:06.144 5c6c Delete type=0 #3
