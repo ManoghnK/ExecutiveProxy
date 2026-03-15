@@ -13,12 +13,12 @@
 ---
 
 ## Environment
-- **AWS Account:** ManoghnK (0840-4725-5317)
+- **AWS Account:** Slalom SSO (3410-8326-2352)
 - **AWS Region:** us-east-1 (N. Virginia) — ALL resources go here
-- **AWS CLI:** Configured ✅
+- **SSO Region:** eu-central-1 (credentials only)
+- **Authentication:** AWS SSO (temporary credentials, refresh every 12h)
 - **Nova Portal:** nova.amazon.com/dev — logged in with Amazon.com credentials ✅
 - **Nova Act API Key:** 2335ddcf-37ce-4340-97b4-d6d1f22c5de1 ✅
-- **Pinecone:** Not yet configured
 
 ---
 

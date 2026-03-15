@@ -70,6 +70,7 @@ class LambdaStack(Stack):
 
         # ── 3. RAG Handler (Pinecone) ────────────────────────────────────────
         # Helper for retrieving context. Invoked by Executor.
+        import os
         self.rag_function = _lambda.Function(
             self,
             "RagHandler",
@@ -79,12 +80,13 @@ class LambdaStack(Stack):
             timeout=Duration.seconds(30),
             environment={
                 "PINECONE_INDEX_NAME": "executive-proxy-policies",
-                # PINECONE_API_KEY to be added via Secrets Manager later
+                "PINECONE_API_KEY": os.environ.get("PINECONE_API_KEY", ""),
             },
         )
         # Permissions - Placeholder for Secrets Manager
+        action_table.grant_write_data(self.rag_function)
         self.rag_function.add_to_role_policy(iam.PolicyStatement(
-            actions=["secretsmanager:GetSecretValue", "s3:GetObject"],
+            actions=["secretsmanager:GetSecretValue", "s3:GetObject", "bedrock:InvokeModel"],
             resources=["*"]
         ))
 
@@ -100,8 +102,12 @@ class LambdaStack(Stack):
             environment={
                 "MEETING_TABLE": meeting_table.table_name,
                 "ACTION_TABLE": action_table.table_name,
-                "RAG_FUNCTION_NAME": self.rag_function.function_name,
+                "RAG_LAMBDA_NAME": self.rag_function.function_name,
                 "MODEL_ID": "amazon.nova-pro-v1:0",
+                "JIRA_BASE_URL": os.environ.get("JIRA_BASE_URL", ""),
+                "JIRA_USER_EMAIL": os.environ.get("JIRA_USER_EMAIL", ""),
+                "JIRA_API_TOKEN": os.environ.get("JIRA_API_TOKEN", ""),
+                "JIRA_PROJECT_KEY": os.environ.get("JIRA_PROJECT_KEY", ""),
             },
         )
         # Permissions
