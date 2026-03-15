@@ -24,6 +24,10 @@ JIRA_USER_EMAIL = os.environ.get("JIRA_USER_EMAIL")
 JIRA_API_TOKEN = os.environ.get("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.environ.get("JIRA_PROJECT_KEY", "EP")
 
+# Nova Act toggle — set to "true" when running on a machine with a browser
+# (local dev, EC2, ECS). Cannot run inside Lambda (no browser available).
+NOVA_ACT_ENABLED = os.environ.get("NOVA_ACT_ENABLED", "false").lower() == "true"
+
 # Model ID (Using Inference Profile for stability)
 EXECUTOR_MODEL_ID = "us.amazon.nova-pro-v1:0"
 
@@ -136,8 +140,43 @@ def invoke_tool_use(intent: str, extracted_action: str, entities: dict) -> dict:
         print(f"Error invoking Nova Pro: {e}")
         return {"error": str(e)}
 
-def execute_jira(tool_input: dict) -> dict:
-    """Calls Jira API."""
+def execute_jira_nova_act(tool_input: dict) -> dict:
+    """
+    Create Jira ticket via Nova Act UI automation.
+    Only works on machines with a browser (local dev, EC2, ECS).
+    Cannot run inside Lambda.
+    """
+    try:
+        # Import from nova_act_agent (must be on PYTHONPATH or installed)
+        sys_path_added = False
+        import sys
+        agent_path = os.path.join(os.path.dirname(__file__), "..", "..", "nova_act_agent")
+        if os.path.exists(agent_path) and agent_path not in sys.path:
+            sys.path.insert(0, os.path.abspath(agent_path))
+            sys_path_added = True
+
+        from jira_agent import create_ticket
+        result = create_ticket(
+            summary=tool_input.get("summary", "Untitled"),
+            description=tool_input.get("description", ""),
+            issue_type=tool_input.get("issue_type", "Task"),
+            priority=tool_input.get("priority", "Medium"),
+            assignee=tool_input.get("assignee"),
+            labels=tool_input.get("labels"),
+            jira_url=JIRA_BASE_URL,
+        )
+        return result
+
+    except ImportError as e:
+        print(f"Nova Act agent import failed: {e}")
+        return {"error": f"Nova Act agent not available: {e}"}
+    except Exception as e:
+        print(f"Nova Act execution failed: {e}")
+        return {"error": str(e)}
+
+
+def execute_jira_rest_api(tool_input: dict) -> dict:
+    """Create Jira ticket via REST API (works inside Lambda)."""
     if not (JIRA_BASE_URL and JIRA_USER_EMAIL and JIRA_API_TOKEN):
         return {"status": "SKIPPED", "reason": "Jira credentials not set"}
     
@@ -168,20 +207,83 @@ def execute_jira(tool_input: dict) -> dict:
             }
         }
         
-        print(f"Calling Jira: {url}")
+        print(f"Calling Jira REST API: {url}")
         resp = requests.post(url, headers=headers, json=payload)
         resp.raise_for_status()
         return resp.json()
         
     except Exception as e:
-        # If response exists, return its text
         return {"error": str(e)}
 
-def execute_calendar(tool_input: dict) -> dict:
-    """Mock Google Calendar execution."""
-    # TODO: Replace with Google Calendar API call
-    print(f"MOCK CALENDAR: Creating event '{tool_input.get('title')}' at {tool_input.get('start_datetime')}")
+
+def execute_jira(tool_input: dict) -> dict:
+    """
+    Route to Nova Act or REST API based on NOVA_ACT_ENABLED toggle.
+    Nova Act provides UI automation (for demos/hackathon).
+    REST API provides reliable programmatic access (for Lambda).
+    """
+    if NOVA_ACT_ENABLED:
+        print("Using Nova Act UI automation for Jira ticket creation")
+        result = execute_jira_nova_act(tool_input)
+        if result.get("success") or result.get("ticket_id"):
+            return result
+        # Fallback to REST API if Nova Act fails
+        print(f"Nova Act failed, falling back to REST API: {result.get('error')}")
+    
+    return execute_jira_rest_api(tool_input)
+
+def execute_calendar_nova_act(tool_input: dict) -> dict:
+    """
+    Create calendar event via Nova Act UI automation.
+    Only works on machines with a browser (local dev, EC2, ECS).
+    """
+    try:
+        import sys
+        agent_path = os.path.join(os.path.dirname(__file__), "..", "..", "nova_act_agent")
+        if os.path.exists(agent_path) and agent_path not in sys.path:
+            sys.path.insert(0, os.path.abspath(agent_path))
+
+        from calendar_agent import create_event
+        result = create_event(
+            title=tool_input.get("title", "Untitled Event"),
+            start_time=tool_input.get("start_time") or tool_input.get("start_datetime", ""),
+            end_time=tool_input.get("end_time") or tool_input.get("end_datetime", ""),
+            description=tool_input.get("description", ""),
+            attendees=tool_input.get("attendees"),
+            location=tool_input.get("location"),
+        )
+        return result
+
+    except ImportError as e:
+        print(f"Nova Act calendar agent import failed: {e}")
+        return {"error": f"Nova Act calendar agent not available: {e}"}
+    except Exception as e:
+        print(f"Nova Act calendar execution failed: {e}")
+        return {"error": str(e)}
+
+
+def execute_calendar_mock(tool_input: dict) -> dict:
+    """Mock calendar execution (when Nova Act unavailable and no GCal API)."""
+    # TODO: Replace with real Google Calendar API in Day 3
+    print(f"MOCK CALENDAR: Creating event '{tool_input.get('title')}' "
+          f"at {tool_input.get('start_time') or tool_input.get('start_datetime')}")
     return {"status": "MOCKED", "data": tool_input}
+
+
+def execute_calendar(tool_input: dict) -> dict:
+    """
+    Route to Nova Act or mock based on NOVA_ACT_ENABLED toggle.
+    Nova Act provides UI automation (for demos/hackathon).
+    Mock provides a placeholder (real GCal API planned for Day 3).
+    """
+    if NOVA_ACT_ENABLED:
+        print("Using Nova Act UI automation for calendar event creation")
+        result = execute_calendar_nova_act(tool_input)
+        if result.get("success") or result.get("event_id"):
+            return result
+        print(f"Nova Act failed, falling back to mock: {result.get('error')}")
+
+    return execute_calendar_mock(tool_input)
 
 def handler(event, context):
     """

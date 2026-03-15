@@ -77,6 +77,7 @@ executive-proxy/
 ├── CLAUDE.md                  ← THIS FILE
 ├── cdk/                       ← All infrastructure as code
 │   ├── app.py
+│   ├── schema.graphql         ← AppSync GraphQL schema
 │   └── stacks/
 │       ├── dynamo_stack.py
 │       ├── lambda_stack.py
@@ -88,14 +89,16 @@ executive-proxy/
 │   │   └── handler.py
 │   ├── executor/              ← Nova Pro + tool use
 │   │   └── handler.py
-│   └── rag_handler/           ← Pinecone RAG query
+│   ├── rag_handler/           ← Pinecone RAG query
+│   │   └── handler.py
+│   └── stream_resolver/       ← DynamoDB Stream → AppSync mutations
 │       └── handler.py
 ├── nova_act_agent/            ← Nova Act UI automation
 │   ├── jira_agent.py
 │   └── calendar_agent.py
 ├── frontend/                  ← Electron + React
-│   ├── src/
-│   └── package.json
+│   └── src/
+│       └── appsync-client.js  ← AppSync subscription client
 ├── scripts/                   ← Local test + seed scripts
 │   ├── test_classifier.py
 │   ├── test_executor.py
@@ -136,14 +139,17 @@ JIRA_PROJECT_KEY=           # e.g. EP
 GOOGLE_CALENDAR_CREDENTIALS= # path to service account JSON
 DYNAMODB_MEETING_TABLE=MeetingState
 DYNAMODB_ACTION_TABLE=ActionLog
+CLASSIFIER_LAMBDA_ARN=      # auto-set by CDK (transcribe → classifier wiring)
+APPSYNC_API_URL=            # auto-set by CDK (ExecProxyAppSync stack output)
+APPSYNC_API_KEY=            # auto-set by CDK (ExecProxyAppSync stack output)
 ```
 
 ---
 
 ## Current Status
-**Day:** 1
-**Phase:** Infrastructure Setup
-**Current Task:** DAY 2: Build Nova Act UI agent + transcribe_handler
+**Day:** 2
+**Phase:** Core Pipeline Build → Frontend
+**Current Task:** DAY 3: Electron Frontend scaffold
 
 ## Completed
 - [x] AWS account active
@@ -161,16 +167,16 @@ DYNAMODB_ACTION_TABLE=ActionLog
 - [x] classifier Lambda — Nova 2 Lite, 4/4 intents correct
 - [x] executor Lambda — Nova Pro tool use, all 3 routing paths working
 - [x] rag_handler Lambda — Titan embeddings, Pinecone retrieval, risk matrix generation
+- [x] transcribe_handler Lambda — Nova 2 Sonic via aws_sdk_bedrock_runtime, DynamoDB write, async classifier invoke
+- [x] Nova Act Jira agent — 9-step act() workflow, act_get() ticket ID extraction, mock fallback, executor integration
+- [x] Nova Act Calendar agent — 10-step act() workflow, ISO8601 parsing, mock fallback, executor integration, shared auth
+- [x] AppSync + DynamoDB Streams — GraphQL API, stream resolver Lambda, real-time subscriptions, frontend client
 
 ## In Progress
-- [ ] Connect DynamoDB Stream to AppSync
+- [ ] Electron Frontend scaffold (React + AppSync subscriptions)
 
 ## Known Blockers
 - None
-
-
-## Known Blockers
-- Pinecone account not yet created
 
 ## Decisions Made
 1. Use Nova 2 Sonic over Amazon Transcribe — cleaner Nova-native story for judges
@@ -181,6 +187,16 @@ DYNAMODB_ACTION_TABLE=ActionLog
 6. Embedding model: amazon.titan-embed-text-v2:0 (1024-dim) — Nova multimodal 
    embeddings incompatible with account; Titan is production-grade equivalent
 7. Use Nova 2 Lite Cross-Region Inference Profile (`us.amazon.nova-2-lite-v1:0`) — standard on-demand ID not supported in us-east-1.
-7. Executor uses us.amazon.nova-pro-v1:0 (cross-region inference profile) — more stable than direct regional endpoint
-8. Calendar integration is mocked with TODO — real Google Calendar API in Day 3
-9. POLICY_RISK routes directly to rag_handler via async Lambda invoke — no double Nova Pro call
+8. Executor uses us.amazon.nova-pro-v1:0 (cross-region inference profile) — more stable than direct regional endpoint
+9. Calendar uses Nova Act UI automation with mock fallback — real Google Calendar API adds no demo value, Nova Act is the prize angle
+10. POLICY_RISK routes directly to rag_handler via async Lambda invoke — no double Nova Pro call
+11. Nova 2 Sonic uses `aws_sdk_bedrock_runtime` SDK (not boto3) — bidirectional streaming requires the experimental Python SDK
+12. Transcribe handler uses chunked Lambda model — frontend sends 3-10s audio chunks per invocation; each creates a Nova Sonic session, transcribes, writes DynamoDB, triggers classifier
+13. Nova Act cannot run inside Lambda — requires a real browser (Playwright/Chrome). Runs locally alongside Electron frontend or on EC2/ECS
+14. Jira auth uses persistent `user_data_dir` — one-time `--setup-auth` saves the browser session, subsequent runs reuse it with `clone_user_data_dir=False`
+14b. Ensure that `use_default_chrome_browser=True` is NOT used on Windows setups as it raises a `NotImplementedError` via Nova Act SDK since it is only currently supported on macOS.
+15. Executor has `NOVA_ACT_ENABLED` toggle — when true, routes to Nova Act agent first with REST API fallback; when false (Lambda default), uses REST API only
+16. Calendar and Jira agents share the same `user_data_dir` — single `--setup-auth` authenticates both services if done from the same browser profile
+17. AppSync uses API_KEY auth — simplest for hackathon; IAM/Cognito for production
+18. Stream resolver uses stdlib only (urllib) — zero Lambda dependencies, fast cold start
+

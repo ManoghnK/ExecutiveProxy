@@ -47,18 +47,14 @@ JIRA_PROJECT_KEY = os.environ.get("JIRA_PROJECT_KEY", "EP")
 JIRA_USER_EMAIL = os.environ.get("JIRA_USER_EMAIL")
 JIRA_PASSWORD = os.environ.get("JIRA_PASSWORD")
 
-# Persistent browser session directory (cross-platform)
-DEFAULT_USER_DATA_DIR = os.environ.get(
-    "NOVA_ACT_USER_DATA_DIR",
-    os.path.expanduser("~/Library/Application Support/Google/Chrome"),
-)
+# Persistent browser profile directory
+BROWSER_PROFILE = Path(__file__).parent / "browser_profile"
+BROWSER_PROFILE.mkdir(exist_ok=True)
 
 
 def _get_user_data_dir() -> str:
     """Get or create the persistent browser data directory."""
-    path = DEFAULT_USER_DATA_DIR
-    os.makedirs(path, exist_ok=True)
-    return path
+    return str(BROWSER_PROFILE)
 
 
 class JiraUIAgent:
@@ -134,17 +130,12 @@ class JiraUIAgent:
         metadata = {}
 
         try:
-            # Path to Chrome profile on macOS
-            USER_DATA_DIR = os.path.expanduser(
-                "~/Library/Application Support/Google/Chrome"
-            )
-
             with NovaAct(
-                starting_page=f"{self.jira_url}/jira/software/projects",
+                starting_page=f"{self.jira_url}/jira/projects",
                 nova_act_api_key=self.api_key,
-                headless=False,
-                user_data_dir=USER_DATA_DIR,
-                clone_user_data_dir=True,  # Nova Act clones it so original is safe
+                headless=self.headless,
+                user_data_dir=self.user_data_dir,
+                clone_user_data_dir=False,  # ← CRITICAL: Reuse profile instead of cloning
             ) as nova:
 
                 # ── Step 1: Navigate to create ticket ────────────────────────

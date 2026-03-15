@@ -1,8 +1,37 @@
+# Environment & Secrets
 .env
+.env.*
+!.env.example
+executiveproxy-81469e743715.json
+
+# Python
 venv/
 __pycache__/
 *.pyc
-.DS_Store
-cdk.out/
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
 .pytest_cache/
+
+# AWS CDK
+cdk.out/
+cdk.context.json
+
+# Node / Electron
 node_modules/
+frontend/dist/
+frontend/out/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

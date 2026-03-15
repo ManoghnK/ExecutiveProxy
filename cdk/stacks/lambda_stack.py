@@ -4,6 +4,7 @@ from aws_cdk import (
     aws_iam as iam,
     Duration,
     CfnOutput,
+    BundlingOptions,
 )
 from constructs import Construct
 
@@ -13,24 +14,30 @@ class LambdaStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # ── 1. Transcribe Handler (Nova 2 Sonic) ─────────────────────────────
-        # Ingests audio stream, calls Bedrock, writes valid segments to DynamoDB.
+        # Ingests audio stream, calls Bedrock Nova Sonic, writes transcript to DynamoDB,
+        # then invokes classifier Lambda asynchronously.
         self.transcribe_function = _lambda.Function(
             self,
             "TranscribeHandler",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="handler.handler",
             code=_lambda.Code.from_asset("../lambdas/transcribe_handler"),
-            timeout=Duration.seconds(60),
+            timeout=Duration.seconds(120),  # Streaming + DynamoDB + async invoke
+            memory_size=512,  # Extra memory for audio processing
             environment={
-                "MEETING_TABLE": meeting_table.table_name,
+                "DYNAMODB_MEETING_TABLE": meeting_table.table_name,
                 "MODEL_ID": "amazon.nova-2-sonic-v1:0",
+                # CLASSIFIER_LAMBDA_ARN set below after classifier is created
             },
         )
         # Permissions
         meeting_table.grant_write_data(self.transcribe_function)
         self.transcribe_function.add_to_role_policy(iam.PolicyStatement(
-            actions=["bedrock:InvokeModelWithResponseStream"],
-            resources=["*"] # Specific ARN preferred in prod but "*" ensures model access
+            actions=[
+                "bedrock:InvokeModelWithResponseStream",
+                "bedrock:InvokeModelWithBidirectionalStream",
+            ],
+            resources=["*"]  # Specific ARN preferred in prod but "*" ensures model access
         ))
 
         # ── 2. Classifier Handler (Nova 2 Lite) ──────────────────────────────
@@ -53,6 +60,13 @@ class LambdaStack(Stack):
             actions=["bedrock:InvokeModel"],
             resources=["*"]
         ))
+
+        # ── Wire: Transcribe → Classifier ────────────────────────────────────
+        # Now that classifier exists, set the ARN and grant invoke permission
+        self.transcribe_function.add_environment(
+            "CLASSIFIER_LAMBDA_ARN", self.classifier_function.function_arn
+        )
+        self.classifier_function.grant_invoke(self.transcribe_function)
 
         # ── 3. RAG Handler (Pinecone) ────────────────────────────────────────
         # Helper for retrieving context. Invoked by Executor.
