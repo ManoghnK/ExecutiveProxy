@@ -215,4 +215,5 @@ TRANSCRIBE_LAMBDA_URL=      # Lambda Function URL for transcribe_handler
 19. Frontend uses no bundler (Babel/React via CDN ESM) — simplifies local iteration and reduces build complexity
 20. Frontend uses AWS SDK in Electron Main process for Lambda invocation — HTTP Function URLs blocked by AWS Organization SCPs
 21. Audio chunking happens in React, sent via IPC to Main, then direct Lambda invoke — avoids CORS/SCP issues completely
+22. Jira Rest API V3 implementation — requires `Atlassian Document Format` (ADF) for the descriptions; simple text is rejected with 400 Bad Request. Executor now handles this construction.
 
