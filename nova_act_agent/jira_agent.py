@@ -140,138 +140,41 @@ class JiraUIAgent:
                 clone_user_data_dir=False,  # ← CRITICAL: Reuse profile instead of cloning
             ) as nova:
 
-                # ── Step 1: Navigate to create ticket ────────────────────────
-                logger.info("Step 1: Opening create issue dialog")
-                result = nova.act(
-                    "Click the 'Create' button in the top navigation bar "
-                    "to open the create issue dialog. If there's a '+ Create' "
-                    "or 'Create issue' button, click that."
+                # ── Step 1: Create the Jira Ticket (Single Multi-Step Instruction) ─
+                logger.info("Step 1: Creating the entire ticket via comprehensive prompt")
+                
+                safe_summary = summary.replace('"', '\\"').replace("'", "\\'")
+                safe_desc = description.replace('"', '\\"').replace("'", "\\'") if description else ""
+                labels_str = ", ".join(labels) if labels else ""
+                
+                comprehensive_prompt = (
+                    "Create a new Jira ticket with the following details:\n"
+                    f"- Project: {self.project_key}\n"
+                    f"- Issue Type: {issue_type}\n"
+                    f"- Summary: {safe_summary}\n"
                 )
+                
+                if safe_desc:
+                    comprehensive_prompt += f"- Description: {safe_desc}\n"
+                if priority and priority != "Medium":
+                    comprehensive_prompt += f"- Priority: {priority}\n"
+                if assignee:
+                    comprehensive_prompt += f"- Assignee: {assignee}\n"
+                if labels_str:
+                    comprehensive_prompt += f"- Labels: {labels_str}\n"
+                    
+                comprehensive_prompt += (
+                    "\nInstructions:\n"
+                    "1. Click the 'Create' button in the top navigation bar to open the create issue dialog.\n"
+                    "2. Set the Project and Issue Type.\n"
+                    "3. Fill in the Summary, Description, Priority, Assignee, and Labels exactly as specified above if they are present.\n"
+                    "4. Finally, click the primary 'Create' or 'Submit' button at the bottom of the form to create the issue.\n"
+                    "5. Return once the ticket is saved and the modal is closed or you see a confirmation toast/notification."
+                )
+
+                result = nova.act(comprehensive_prompt, max_steps=60)
                 steps_completed = 1
                 logger.info(f"Step 1 complete ({result.metadata.num_steps_executed} browser steps)")
-
-                # ── Step 2: Set project and issue type ───────────────────────
-                logger.info(f"Step 2: Setting project to {self.project_key} and type to {issue_type}")
-                result = nova.act(
-                    f"In the create issue form, set the project to "
-                    f"'{self.project_key}' if it's not already selected. "
-                    f"Set the issue type to '{issue_type}'. "
-                    f"If there's a project dropdown, select the correct project first."
-                )
-                steps_completed = 2
-                logger.info(f"Step 2 complete ({result.metadata.num_steps_executed} browser steps)")
-
-                # ── Step 3: Fill in summary (with verification + retry) ────
-                logger.info("Step 3: Filling in summary")
-                safe_summary = summary.replace('"', '\\"').replace("'", "\\'")
-
-                summary_filled = False
-                for attempt in range(3):
-                    if attempt > 0:
-                        logger.info(f"Step 3: Retry attempt {attempt} — Summary field was empty")
-
-                    nova.act(
-                        f"The create issue form may have just reloaded after "
-                        f"changing the project or issue type. Wait a moment for "
-                        f"the form to fully load and stabilize. "
-                        f"Now find the 'Summary' text input field — it is a "
-                        f"required field, usually the first input in the form. "
-                        f"Click directly inside the Summary input field to give "
-                        f"it focus. Clear any existing text in it. Then type "
-                        f"this exact text: {safe_summary} "
-                        f"Confirm the text appears in the Summary field."
-                    )
-
-                    # Verify the Summary field is not empty
-                    try:
-                        verify = nova.act_get(
-                            "Look at the 'Summary' text input field in the create "
-                            "issue form. What text is currently inside the Summary "
-                            "field? Return the exact text content. If the field is "
-                            "empty, return the word EMPTY."
-                        )
-                        response = (verify.response or "").strip()
-                        logger.info(f"Step 3: Summary field content: '{response}'")
-
-                        if response and response.upper() != "EMPTY":
-                            summary_filled = True
-                            break
-                    except Exception as verify_err:
-                        logger.warning(f"Step 3: Verification failed: {verify_err}")
-                        # Assume it worked if verification itself errors
-                        summary_filled = True
-                        break
-
-                if not summary_filled:
-                    logger.warning("Step 3: Summary field still empty after 3 attempts")
-
-                steps_completed = 3
-                logger.info(f"Step 3 complete (filled={summary_filled})")
-
-                # ── Step 4: Fill in description ──────────────────────────────
-                if description:
-                    logger.info("Step 4: Filling in description")
-                    safe_desc = description.replace('"', '\\"').replace("'", "\\'")
-                    result = nova.act(
-                        f"In the create issue form, click on the Description field "
-                        f"and type: {safe_desc}"
-                    )
-                    steps_completed = 4
-                    logger.info(f"Step 4 complete ({result.metadata.num_steps_executed} browser steps)")
-                else:
-                    steps_completed = 4
-                    logger.info("Step 4: No description, skipping")
-
-                # ── Step 5: Set priority ─────────────────────────────────────
-                if priority and priority != "Medium":
-                    logger.info(f"Step 5: Setting priority to {priority}")
-                    result = nova.act(
-                        f"In the create issue form, find the Priority field "
-                        f"and set it to '{priority}'. Click the priority "
-                        f"dropdown and select '{priority}'."
-                    )
-                    steps_completed = 5
-                    logger.info(f"Step 5 complete ({result.metadata.num_steps_executed} browser steps)")
-                else:
-                    steps_completed = 5
-                    logger.info("Step 5: Using default priority, skipping")
-
-                # ── Step 6: Assign (optional) ────────────────────────────────
-                if assignee:
-                    logger.info(f"Step 6: Assigning to {assignee}")
-                    result = nova.act(
-                        f"In the create issue form, find the Assignee field "
-                        f"and set it to '{assignee}'. Type the name in the "
-                        f"assignee search box and select the matching user."
-                    )
-                    steps_completed = 6
-                    logger.info(f"Step 6 complete ({result.metadata.num_steps_executed} browser steps)")
-                else:
-                    steps_completed = 6
-
-                # ── Step 7: Add labels (optional) ────────────────────────────
-                if labels:
-                    logger.info(f"Step 7: Adding labels {labels}")
-                    labels_str = ", ".join(labels)
-                    result = nova.act(
-                        f"In the create issue form, find the Labels field "
-                        f"and add these labels: {labels_str}. "
-                        f"Type each label and press Enter to add it."
-                    )
-                    steps_completed = 7
-                    logger.info(f"Step 7 complete ({result.metadata.num_steps_executed} browser steps)")
-                else:
-                    steps_completed = 7
-
-                # ── Step 8: Submit the form ──────────────────────────────────
-                logger.info("Step 8: Submitting the form")
-                result = nova.act(
-                    "Click the 'Create' or 'Submit' button to create the issue. "
-                    "Do NOT click cancel. Click the primary submit button at the "
-                    "bottom of the create issue form."
-                )
-                steps_completed = 8
-                logger.info(f"Step 8 complete ({result.metadata.num_steps_executed} browser steps)")
 
                 # ── Step 9: Extract ticket ID ────────────────────────────────
                 logger.info("Step 9: Extracting ticket ID")

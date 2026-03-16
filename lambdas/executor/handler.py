@@ -10,7 +10,8 @@ import json
 import uuid
 import datetime
 import base64
-import requests
+import urllib.request
+import urllib.error
 import boto3
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -215,17 +216,62 @@ def execute_jira_rest_api(tool_input: dict) -> dict:
         payload = {"fields": fields}
         
         print(f"Calling Jira REST API: {url} with payload: {json.dumps(payload)}")
-        resp = requests.post(url, headers=headers, json=payload)
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
         try:
-            resp.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            print(f"Jira API Error: {resp.text}")
-            return {"error": f"{str(e)} - Body: {resp.text}"}
+            with urllib.request.urlopen(req) as response:
+                response_body = response.read().decode('utf-8')
+                result_data = json.loads(response_body)
+                ticket_id = result_data.get("key")
+                
+                if ticket_id:
+                    _move_to_active_sprint(ticket_id, headers)
+                    
+                return result_data
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8')
+            print(f"Jira API Error: {error_body}")
+            return {"error": f"{str(e)} - Body: {error_body}"}
             
-        return resp.json()
-        
     except Exception as e:
         return {"error": str(e)}
+
+def _move_to_active_sprint(ticket_id: str, headers: dict):
+    """Move a ticket into the active sprint using the Jira REST API."""
+    try:
+        # 1. Find the board for this project
+        boards_url = f"{JIRA_BASE_URL}/rest/agile/1.0/board?projectKeyOrId={JIRA_PROJECT_KEY}"
+        req = urllib.request.Request(boards_url, headers=headers)
+        with urllib.request.urlopen(req) as response:
+            boards_data = json.loads(response.read().decode('utf-8'))
+            boards = boards_data.get("values", [])
+            
+        if not boards:
+            print("No boards found for project — cannot move to sprint")
+            return
+            
+        board_id = boards[0]["id"]
+        
+        # 2. Get the active sprint for this board
+        sprints_url = f"{JIRA_BASE_URL}/rest/agile/1.0/board/{board_id}/sprint?state=active"
+        req = urllib.request.Request(sprints_url, headers=headers)
+        with urllib.request.urlopen(req) as response:
+            sprints_data = json.loads(response.read().decode('utf-8'))
+            sprints = sprints_data.get("values", [])
+            
+        if not sprints:
+            print("No active sprint found — ticket stays in backlog")
+            return
+            
+        sprint_id = sprints[0]["id"]
+        
+        # 3. Move the issue into the sprint
+        move_url = f"{JIRA_BASE_URL}/rest/agile/1.0/sprint/{sprint_id}/issue"
+        payload = {"issues": [ticket_id]}
+        req = urllib.request.Request(move_url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
+        with urllib.request.urlopen(req) as response:
+            print(f"Ticket {ticket_id} moved to active sprint {sprint_id} via REST API fallback")
+    except Exception as e:
+        print(f"Failed to move ticket to sprint during REST API fallback: {e}")
 
 
 def execute_jira(tool_input: dict) -> dict:

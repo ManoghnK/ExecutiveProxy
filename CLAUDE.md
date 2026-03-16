@@ -216,4 +216,5 @@ TRANSCRIBE_LAMBDA_URL=      # Lambda Function URL for transcribe_handler
 20. Frontend uses AWS SDK in Electron Main process for Lambda invocation — HTTP Function URLs blocked by AWS Organization SCPs
 21. Audio chunking happens in React, sent via IPC to Main, then direct Lambda invoke — avoids CORS/SCP issues completely
 22. Jira Rest API V3 implementation — requires `Atlassian Document Format` (ADF) for the descriptions; simple text is rejected with 400 Bad Request. Executor now handles this construction.
-
+23. Local Executor Bridge (`local_executor.py`) — The frontend spawns a local Python subprocess to execute Nova Act UI agents (like Jira and Calendar) locally on the user's machine when `NOVA_ACT_ENABLED` is true. Real-time status updates are emitted via `stdout` JSON lines and displayed in the React UI, while the remote AppSync subscriptions are ignored to prevent duplicate action cards.
+24. Nova Act Agent Optimizations — Complex prompts combining multiple fields (summary, description, assignees) are used in a single `nova.act()` call for reliability. The calendar agent bypasses brittle pop-ups by navigating directly to the `/r/eventedit` URL, and step limits (`max_steps`) are increased to 60.
