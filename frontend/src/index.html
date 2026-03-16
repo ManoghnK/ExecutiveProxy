@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" 
+        content="default-src 'self' 'unsafe-inline' 'unsafe-eval' 
+                 https://cdn.tailwindcss.com 
+                 https://unpkg.com 
+                 https://cdn.jsdelivr.net; 
+                 connect-src *;">
+  <title>Executive Proxy</title>
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { margin: 0; background: #0f0f0f; color: #e5e5e5; 
+           font-family: 'Inter', sans-serif; overflow: hidden; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #1a1a1a; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    @keyframes pulse-red { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+    @keyframes slide-in { from { transform:translateX(100%); opacity:0; } 
+                          to { transform:translateX(0); opacity:1; } }
+    .pulse-red { animation: pulse-red 1.5s infinite; }
+    .slide-in { animation: slide-in 0.3s ease-out; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const MEETING_ID = "demo-meeting-001";
+    const CLASSIFIER_LAMBDA = "ExecProxyLambdas-ClassifierHandler36143077-8LCr02quojra";
+
+    // ── INTENT COLORS ────────────────────────────────────────
+    const INTENT_COLORS = {
+      JIRA_TICKET:    { border: "#3b82f6", bg: "#1e3a5f", label: "JIRA"     },
+      CALENDAR_EVENT: { border: "#22c55e", bg: "#14532d", label: "CALENDAR" },
+      POLICY_RISK:    { border: "#ef4444", bg: "#450a0a", label: "RISK"     },
+      NO_ACTION:      { border: "#444",    bg: "#1a1a1a", label: "NONE"     },
+    };
+
+    // ── TRANSCRIPT FEED ──────────────────────────────────────
+    function TranscriptFeed({ transcripts }) {
+      const bottomRef = useRef(null);
+      useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, [transcripts]);
+
+      return (
+        <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
+          <div style={{ padding:"12px 16px", borderBottom:"1px solid #222",
+                        color:"#00d4ff", fontWeight:600, fontSize:12,
+                        letterSpacing:2 }}>
+            LIVE TRANSCRIPT
+          </div>
+          <div style={{ flex:1, overflowY:"auto", padding:"8px" }}>
+            {transcripts.length === 0 ? (
+              <div style={{ color:"#555", textAlign:"center", 
+                            marginTop:40, fontSize:13 }}>
+                Waiting for audio...
+              </div>
+            ) : (
+              transcripts.filter(t => t && t.intent_label).map((t, i) => {
+                const colors = INTENT_COLORS[t.intent_label] || INTENT_COLORS.NO_ACTION;
+                return (
+                  <div key={i} style={{
+                    borderLeft: `3px solid ${colors.border}`,
+                    padding: "6px 10px", marginBottom: 6,
+                    background: "#111", borderRadius:"0 4px 4px 0"
+                  }}>
+                    <div style={{ fontSize:10, color:"#555", marginBottom:2 }}>
+                      {t.speaker} · {new Date(t.timestamp).toLocaleTimeString()}
+                    </div>
+                    <div style={{ fontSize:13, lineHeight:1.5 }}>{t.text}</div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={bottomRef} />
+          </div>
+        </div>
+      );
+    }
+
+    // ── ACTION CARDS ─────────────────────────────────────────
+    function ActionCards({ actions }) {
+      const STATUS_ICON = {
+        PENDING:   <span style={{color:"#fbbf24"}}>⟳</span>,
+        COMPLETED: <span style={{color:"#22c55e"}}>✓</span>,
+        FAILED:    <span style={{color:"#ef4444"}}>✗</span>,
+        HANDOFF:   <span style={{color:"#00d4ff"}}>→</span>,
+      };
+
+      return (
+        <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
+          <div style={{ padding:"12px 16px", borderBottom:"1px solid #222",
+                        color:"#00d4ff", fontWeight:600, fontSize:12,
+                        letterSpacing:2 }}>
+            ACTIONS
+          </div>
+          <div style={{ flex:1, overflowY:"auto", padding:"8px" }}>
+            {actions.length === 0 ? (
+              <div style={{ color:"#555", textAlign:"center",
+                            marginTop:40, fontSize:13 }}>
+                No actions triggered yet
+              </div>
+            ) : (
+              [...actions].reverse().filter(a => a && a.action_type).map((a, i) => {
+                const colors = INTENT_COLORS[a.action_type] || INTENT_COLORS.NO_ACTION;
+                let resultPreview = "";
+                try {
+                  const r = typeof a.result === "string" ? JSON.parse(a.result) : a.result;
+                  resultPreview = r.ticket_id || r.risk_level || r.title || "";
+                } catch(e) {}
+
+                return (
+                  <div key={i} className="slide-in" style={{
+                    background:"#1a1a1a", border:`1px solid ${colors.border}`,
+                    borderRadius:8, padding:"10px 14px", marginBottom:8
+                  }}>
+                    <div style={{ display:"flex", justifyContent:"space-between",
+                                  alignItems:"center", marginBottom:6 }}>
+                      <span style={{
+                        background: colors.bg, color: colors.border,
+                        fontSize:10, fontWeight:700, padding:"2px 8px",
+                        borderRadius:4, letterSpacing:1
+                      }}>
+                        {colors.label}
+                      </span>
+                      <span style={{ fontSize:16 }}>
+                        {STATUS_ICON[a.status] || "?"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:12, color:"#ccc", marginBottom:4 }}>
+                      {a.action_type}
+                    </div>
+                    {resultPreview && (
+                      <div style={{ fontSize:11, color:"#00d4ff" }}>
+                        {resultPreview}
+                      </div>
+                    )}
+                    <div style={{ fontSize:10, color:"#444", marginTop:4 }}>
+                      {new Date(a.created_at).toLocaleTimeString()}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ── RISK MATRIX ──────────────────────────────────────────
+    function RiskMatrix({ riskMatrix }) {
+      if (!riskMatrix) return (
+        <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
+          <div style={{ padding:"12px 16px", borderBottom:"1px solid #222",
+                        color:"#00d4ff", fontWeight:600, fontSize:12,
+                        letterSpacing:2 }}>
+            RISK MATRIX
+          </div>
+          <div style={{ color:"#555", textAlign:"center",
+                        marginTop:40, fontSize:13 }}>
+            No risks detected yet
+          </div>
+        </div>
+      );
+
+      const RISK_COLORS = {
+        LOW:      "#22c55e", MEDIUM: "#fbbf24",
+        HIGH:     "#f97316", CRITICAL: "#ef4444"
+      };
+      const color = RISK_COLORS[riskMatrix.risk_level] || "#555";
+      const isCritical = riskMatrix.risk_level === "CRITICAL";
+
+      return (
+        <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
+          <div style={{ padding:"12px 16px", borderBottom:"1px solid #222",
+                        color:"#00d4ff", fontWeight:600, fontSize:12,
+                        letterSpacing:2 }}>
+            RISK MATRIX
+          </div>
+          <div style={{ flex:1, overflowY:"auto", padding:"16px" }}>
+            <div style={{
+              textAlign:"center", padding:"16px",
+              background: `${color}22`, border:`2px solid ${color}`,
+              borderRadius:8, marginBottom:16,
+              ...(isCritical ? {animation:"pulse-red 1s infinite"} : {})
+            }}>
+              <div style={{ fontSize:11, color:"#888", letterSpacing:2 }}>
+                RISK LEVEL
+              </div>
+              <div style={{ fontSize:32, fontWeight:800, color, marginTop:4 }}>
+                {riskMatrix.risk_level}
+              </div>
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:11, color:"#888", letterSpacing:1,
+                            marginBottom:8 }}>
+                POLICY VIOLATIONS
+              </div>
+              {(riskMatrix.policy_violations || []).map((v, i) => (
+                <div key={i} style={{
+                  fontSize:12, color:"#e5e5e5", padding:"6px 0",
+                  borderBottom:"1px solid #1a1a1a", lineHeight:1.5
+                }}>
+                  • {v}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:11, color:"#888", letterSpacing:1,
+                            marginBottom:8 }}>
+                AFFECTED POLICIES
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {(riskMatrix.affected_policies || []).map((p, i) => (
+                  <span key={i} style={{
+                    background:"#1a1a1a", border:"1px solid #333",
+                    borderRadius:4, padding:"2px 8px",
+                    fontSize:11, color:"#00d4ff"
+                  }}>
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize:11, color:"#888", letterSpacing:1,
+                            marginBottom:8 }}>
+                RECOMMENDATION
+              </div>
+              <div style={{ fontSize:12, color:"#ccc", fontStyle:"italic",
+                            lineHeight:1.6 }}>
+                {riskMatrix.recommendation}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── APP ROOT ─────────────────────────────────────────────
+    function App() {
+      const [transcripts, setTranscripts] = useState([]);
+      const [actions, setActions]         = useState([]);
+      const [riskMatrix, setRiskMatrix]   = useState(null);
+      const [isLive, setIsLive]           = useState(false);
+      const [textInput, setTextInput]     = useState("");
+
+      // AppSync subscription via electronAPI
+      useEffect(() => {
+        if (window.electronAPI) {
+          window.electronAPI.onTranscriptChunk((data) => {
+            if (!data || !data.text) return;
+            data.intent_label = data.intent_label || 'NO_ACTION';
+            setTranscripts(prev => [...prev, data]);
+            if (data.intent_label === "POLICY_RISK" && data.risk_matrix) {
+              setRiskMatrix(data.risk_matrix);
+            }
+          });
+          window.electronAPI.onActionUpdate((data) => {
+            if (!data) return;
+            setActions(prev => [...prev, data]);
+            if (data.action_type === "RISK_MATRIX" && data.result) {
+              try {
+                const r = typeof data.result === "string" 
+                          ? JSON.parse(data.result) : data.result;
+                setRiskMatrix(r);
+              } catch(e) {}
+            }
+          });
+        }
+      }, []);
+
+      // AUTO-TEST INJECTION
+      useEffect(() => {
+        setTimeout(() => {
+             const chunk = {
+              meeting_id: MEETING_ID,
+              transcript_chunk: "Schedule a sync with the compliance team on Friday at 2pm",
+              speaker: "Manual",
+              timestamp: new Date().toISOString()
+            };
+            if (window.electronAPI) {
+              console.log("AUTO-TEST: Sending chunk");
+              window.electronAPI.classifyText(chunk);
+            }
+        }, 5000);
+      }, []);
+
+      const toggleRecording = async () => {
+        if (!isLive) {
+          await window.electronAPI?.startRecording();
+          setIsLive(true);
+        } else {
+          await window.electronAPI?.stopRecording();
+          setIsLive(false);
+        }
+      };
+
+      const sendTextInput = async () => {
+        if (!textInput.trim()) return;
+        const chunk = {
+          meeting_id: MEETING_ID,
+          transcript_chunk: textInput,
+          speaker: "Manual",
+          timestamp: new Date().toISOString()
+        };
+        // Add to transcript immediately
+        setTranscripts(prev => [...prev, {
+          text: textInput, speaker: "Manual",
+          timestamp: chunk.timestamp, intent_label: "NO_ACTION"
+        }]);
+        setTextInput("");
+        // Send to classifier via IPC
+        if (window.electronAPI) {
+          window.electronAPI.classifyText(chunk);
+        }
+      };
+
+      const PANEL = { 
+        flex:1, height:"calc(100vh - 100px)", 
+        borderRight:"1px solid #1a1a1a", overflow:"hidden" 
+      };
+
+      return (
+        <div style={{ display:"flex", flexDirection:"column",
+                      height:"100vh", background:"#0f0f0f" }}>
+          {/* TOP BAR */}
+          <div style={{
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            padding:"0 20px", height:50, background:"#0a0a0a",
+            borderBottom:"1px solid #1a1a1a", flexShrink:0
+          }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <span style={{ color:"#00d4ff", fontWeight:800,
+                             fontSize:14, letterSpacing:3 }}>
+                EXECUTIVE PROXY
+              </span>
+              {isLive && (
+                <span className="pulse-red"
+                      style={{ color:"#ef4444", fontSize:11, fontWeight:600 }}>
+                  ● LIVE
+                </span>
+              )}
+            </div>
+            <button onClick={toggleRecording} style={{
+              background: isLive ? "#450a0a" : "#00d4ff22",
+              border: `1px solid ${isLive ? "#ef4444" : "#00d4ff"}`,
+              color: isLive ? "#ef4444" : "#00d4ff",
+              padding:"6px 16px", borderRadius:6,
+              cursor:"pointer", fontSize:12, fontWeight:600
+            }}>
+              {isLive ? "■ STOP" : "● START"}
+            </button>
+          </div>
+
+          {/* THREE PANELS */}
+          <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
+            <div style={{ width:"28%", ...PANEL }}>
+              <TranscriptFeed transcripts={transcripts} />
+            </div>
+            <div style={{ width:"44%", ...PANEL }}>
+              <ActionCards actions={actions} />
+            </div>
+            <div style={{ width:"28%", 
+                          height:"calc(100vh - 100px)", overflow:"hidden" }}>
+              <RiskMatrix riskMatrix={riskMatrix} />
+            </div>
+          </div>
+
+          {/* TEXT FALLBACK */}
+          <div style={{
+            display:"flex", gap:8, padding:"8px 16px",
+            borderTop:"1px solid #1a1a1a", background:"#0a0a0a",
+            flexShrink:0
+          }}>
+            <input
+              value={textInput}
+              onChange={e => setTextInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && sendTextInput()}
+              placeholder="Type a meeting phrase to test... (e.g. 'Let's ticket that login bug')"
+              style={{
+                flex:1, background:"#1a1a1a", border:"1px solid #333",
+                borderRadius:6, padding:"8px 12px",
+                color:"#e5e5e5", fontSize:12, outline:"none"
+              }}
+            />
+            <button onClick={sendTextInput} style={{
+              background:"#00d4ff22", border:"1px solid #00d4ff",
+              color:"#00d4ff", padding:"8px 16px",
+              borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:600
+            }}>
+              SEND
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Mount
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

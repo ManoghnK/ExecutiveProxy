@@ -1,0 +1,19 @@
+{
+  "name": "executive-proxy",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "dependencies": {
+    "@babel/standalone": "^7.0.0",
+    "aws-amplify": "^6.0.0",
+    "aws-sdk": "^2.1693.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.0",
+    "electron": "^28.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
+}

@@ -10,8 +10,7 @@ import json
 import uuid
 import datetime
 import base64
-import urllib.request
-import urllib.parse
+import requests
 import boto3
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -192,26 +191,38 @@ def execute_jira_rest_api(tool_input: dict) -> dict:
         }
         
         # JIRA Format
-        payload = {
-            "fields": {
-                "project": {"key": JIRA_PROJECT_KEY},
-                "summary": tool_input.get("summary"),
-                "description": {
-                    "type": "doc",
-                    "version": 1,
+        fields = {
+            "project": {"key": JIRA_PROJECT_KEY},
+            "summary": tool_input.get("summary"),
+            "description": {
+                "type": "doc",
+                "version": 1,
+                "content": [{
+                    "type": "paragraph",
                     "content": [{
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": tool_input.get("description", "") or "No description"}]
+                        "type": "text", 
+                        "text": tool_input.get("description", "") or "No description"
                     }]
-                },
-                "issuetype": {"name": tool_input.get("issue_type", "Task")}
-            }
+                }]
+            },
+            "issuetype": {"name": tool_input.get("issue_type", "Task")}
         }
         
-        print(f"Calling Jira REST API: {url}")
-        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-        with urllib.request.urlopen(req) as response:
-            return json.loads(response.read().decode("utf-8"))
+        # Priority mapping provided by tools matches Jira standard (Low, Medium, High, Critical) usually
+        if tool_input.get("priority"):
+             fields["priority"] = {"name": tool_input["priority"]}
+
+        payload = {"fields": fields}
+        
+        print(f"Calling Jira REST API: {url} with payload: {json.dumps(payload)}")
+        resp = requests.post(url, headers=headers, json=payload)
+        try:
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            print(f"Jira API Error: {resp.text}")
+            return {"error": f"{str(e)} - Body: {resp.text}"}
+            
+        return resp.json()
         
     except Exception as e:
         return {"error": str(e)}

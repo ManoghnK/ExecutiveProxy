@@ -1,0 +1,51 @@
+
+> executive-proxy@1.0.0 start
+> electron .
+
+(node:94287) NOTE: The AWS SDK for JavaScript (v2) has reached end-of-support.
+It will no longer receive updates or releases.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `Electron --trace-warnings ...` to show where the warning was created)
+[94287:0315/214028.235463:INFO:CONSOLE(64)] "cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation", source: https://cdn.tailwindcss.com/ (64)
+[94287:0315/214028.922865:INFO:CONSOLE(29905)] "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+You might need to use a local HTTP server (instead of file://): https://reactjs.org/link/react-devtools-faq font-weight:bold", source: https://unpkg.com/react-dom@18/umd/react-dom.development.js (29905)
+[94287:0315/214031.995426:WARNING:CONSOLE(2)] "%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security
+  Policy set or a policy with "unsafe-eval" enabled. This exposes users of
+  this app to unnecessary security risks.
+
+For more information and help, consult
+https://electronjs.org/docs/tutorial/security.
+This warning will not show up
+once the app is packaged.", source: node:electron/js2c/sandbox_bundle (2)
+[94287:0315/214032.160711:INFO:CONSOLE(3)] "You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/", source: https://unpkg.com/@babel/standalone/babel.min.js (3)
+[94287:0315/214032.252134:INFO:CONSOLE(2)] "%cElectron Security Warning (Disabled webSecurity) font-weight: bold; This renderer process has "webSecurity" disabled. This
+  exposes users of this app to severe security risks.
+
+For more information and help, consult
+https://electronjs.org/docs/tutorial/security.
+This warning will not show up
+once the app is packaged.", source: node:electron/js2c/sandbox_bundle (2)
+[94287:0315/214032.252264:INFO:CONSOLE(2)] "%cElectron Security Warning (allowRunningInsecureContent) font-weight: bold; This renderer process has "allowRunningInsecureContent"
+  enabled. This exposes users of this app to severe security risks.
+
+  
+For more information and help, consult
+https://electronjs.org/docs/tutorial/security.
+This warning will not show up
+once the app is packaged.", source: node:electron/js2c/sandbox_bundle (2)
+[94287:0315/214032.252317:INFO:CONSOLE(2)] "%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security
+  Policy set or a policy with "unsafe-eval" enabled. This exposes users of
+  this app to unnecessary security risks.
+
+For more information and help, consult
+https://electronjs.org/docs/tutorial/security.
+This warning will not show up
+once the app is packaged.", source: node:electron/js2c/sandbox_bundle (2)
+=== CLASSIFY-TEXT INPUT: {"meeting_id":"demo-meeting-001","transcript_chunk":"Lets ticket that login bug","speaker":"Manual","timestamp":"2026-03-16T02:40:41.583Z"}
+=== RAW LAMBDA RESULT: {"StatusCode":200,"ExecutedVersion":"$LATEST","Payload":"{\"statusCode\": 200, \"body\": \"{\\\"intent\\\": \\\"JIRA_TICKET\\\", \\\"confidence\\\": 1.0, \\\"extracted_action\\\": \\\"Create a ticket for the login bug\\\", \\\"entities\\\": {\\\"issue_type\\\": \\\"bug\\\", \\\"component\\\": \\\"login\\\"}}\"}"}
+=== PAYLOAD STRING: {"statusCode": 200, "body": "{\"intent\": \"JIRA_TICKET\", \"confidence\": 1.0, \"extracted_action\": \"Create a ticket for the login bug\", \"entities\": {\"issue_type\": \"bug\", \"component\": \"login\"}}"}
+=== PARSED PAYLOAD: {"statusCode":200,"body":"{\"intent\": \"JIRA_TICKET\", \"confidence\": 1.0, \"extracted_action\": \"Create a ticket for the login bug\", \"entities\": {\"issue_type\": \"bug\", \"component\": \"login\"}}"}
+=== BODY: {"intent":"JIRA_TICKET","confidence":1,"extracted_action":"Create a ticket for the login bug","entities":{"issue_type":"bug","component":"login"}}
+/Users/rohit/Desktop/College/ExecutiveProxy/frontend/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron exited with signal SIGTERM

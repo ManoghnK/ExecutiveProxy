@@ -57,7 +57,7 @@
 ## Tech Stack
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Electron + React |
+| Frontend | Electron + React + AWS SDK v2 |
 | Voice Ingestion | Amazon Nova 2 Sonic (Bedrock streaming) |
 | Classifier | Nova 2 Lite (Bedrock) |
 | Executor | Nova Pro (Bedrock) + Tool Use |
@@ -97,8 +97,16 @@ executive-proxy/
 │   ├── jira_agent.py
 │   └── calendar_agent.py
 ├── frontend/                  ← Electron + React
+│   ├── main.js                ← Electron Main process
+│   ├── preload.js             ← IPC Bridge
+│   ├── package.json
 │   └── src/
-│       └── appsync-client.js  ← AppSync subscription client
+│       ├── App.jsx            ← Main UI Layout
+│       ├── appsync-client.js  ← AppSync subscriptions
+│       └── components/
+│           ├── TranscriptFeed.jsx
+│           ├── ActionCard.jsx
+│           └── RiskMatrix.jsx
 ├── scripts/                   ← Local test + seed scripts
 │   ├── test_classifier.py
 │   ├── test_executor.py
@@ -142,14 +150,15 @@ DYNAMODB_ACTION_TABLE=ActionLog
 CLASSIFIER_LAMBDA_ARN=      # auto-set by CDK (transcribe → classifier wiring)
 APPSYNC_API_URL=            # auto-set by CDK (ExecProxyAppSync stack output)
 APPSYNC_API_KEY=            # auto-set by CDK (ExecProxyAppSync stack output)
+TRANSCRIBE_LAMBDA_URL=      # Lambda Function URL for transcribe_handler
 ```
 
 ---
 
 ## Current Status
-**Day:** 2
-**Phase:** Core Pipeline Build → Frontend
-**Current Task:** DAY 3: Electron Frontend scaffold
+**Day:** 3
+**Phase:** Frontend → Integration
+**Current Task:** Integration Testing & UI Polish
 
 ## Completed
 - [x] AWS account active
@@ -171,9 +180,13 @@ APPSYNC_API_KEY=            # auto-set by CDK (ExecProxyAppSync stack output)
 - [x] Nova Act Jira agent — 9-step act() workflow, act_get() ticket ID extraction, mock fallback, executor integration
 - [x] Nova Act Calendar agent — 10-step act() workflow, ISO8601 parsing, mock fallback, executor integration, shared auth
 - [x] AppSync + DynamoDB Streams — GraphQL API, stream resolver Lambda, real-time subscriptions, frontend client
+- [x] Electron Frontend scaffold — React + AppSync subscriptions + mic capture pipeline
+- [x] Refactor frontend to use AWS SDK for direct Lambda invocation (bypass SCPs)
+- [x] Fix Jira Integration — Resolved 400 Bad Request by correcting JIRA_PROJECT_KEY to 'SCRUM' and validating payload
 
 ## In Progress
-- [ ] Electron Frontend scaffold (React + AppSync subscriptions)
+- [ ] Integration Testing — End-to-end voice to action validation
+- [ ] Polish UI — Add real-time risk visualization
 
 ## Known Blockers
 - None
@@ -199,4 +212,7 @@ APPSYNC_API_KEY=            # auto-set by CDK (ExecProxyAppSync stack output)
 16. Calendar and Jira agents share the same `user_data_dir` — single `--setup-auth` authenticates both services if done from the same browser profile
 17. AppSync uses API_KEY auth — simplest for hackathon; IAM/Cognito for production
 18. Stream resolver uses stdlib only (urllib) — zero Lambda dependencies, fast cold start
+19. Frontend uses no bundler (Babel/React via CDN ESM) — simplifies local iteration and reduces build complexity
+20. Frontend uses AWS SDK in Electron Main process for Lambda invocation — HTTP Function URLs blocked by AWS Organization SCPs
+21. Audio chunking happens in React, sent via IPC to Main, then direct Lambda invoke — avoids CORS/SCP issues completely
 
