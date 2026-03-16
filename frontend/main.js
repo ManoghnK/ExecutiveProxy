@@ -120,61 +120,63 @@ ipcMain.handle('send-manual-input', async (event, { text, timestamp, meetingId }
 ipcMain.handle('classify-text', async (event, data) => {
   const AWS = require('aws-sdk');
   const lambda = new AWS.Lambda({ region: 'us-east-1' });
-  
+
   try {
-    console.log('=== CLASSIFY-TEXT INPUT:', JSON.stringify(data));
-    
-    const result = await lambda.invoke({
+    // Step 1: Classify
+    const classifyResult = await lambda.invoke({
       FunctionName: 'ExecProxyLambdas-ClassifierHandler36143077-8LCr02quojra',
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify(data)
     }).promise();
-    
-    console.log('=== RAW LAMBDA RESULT:', JSON.stringify(result));
-    console.log('=== PAYLOAD STRING:', result.Payload);
 
-    // Parse Lambda response payload.
-    // If Lambda returns { statusCode, body }, we need to parse body.
-    let payload;
-    try {
-        payload = JSON.parse(result.Payload);
-    } catch (e) {
-        payload = result.Payload;
-    }
-    
-    console.log('=== PARSED PAYLOAD:', JSON.stringify(payload));
-
-    const body = typeof payload.body === 'string' 
+    const payload = JSON.parse(classifyResult.Payload);
+    const body = typeof payload.body === 'string'
                  ? JSON.parse(payload.body) : payload.body || payload;
+    const intent = body.intent || 'NO_ACTION';
+    const confidence = body.confidence || 0;
+
+    console.log('=== INTENT:', intent);
+    console.log('=== CONFIDENCE:', confidence);
     console.log('=== BODY:', JSON.stringify(body));
-    
-    // Transform to ActionLog format
-    const actionUpdate = {
-      meeting_id: data.meeting_id || "demo-meeting-001",
-      action_id: Date.now().toString(),
-      action_type: body.intent || 'NO_ACTION',
-      status: 'COMPLETED', // Since we only classified, we assume intent classification is done. 
-                           // But if we want to run executor, we might need more logic here?
-                           // For now, this matches the user request.
-      result: JSON.stringify(body),
-      created_at: new Date().toISOString()
-    };
-    
-    // Only send to frontend if actionable
-    if (actionUpdate.action_type !== 'NO_ACTION') {
-      event.sender.send('action-update', actionUpdate);
-    }
-    
-    // Also send transcript update with intent label
-    // Check if we already have transcript in data
+
+    // Send transcript update to frontend
     event.sender.send('transcript-chunk', {
       text: data.transcript_chunk,
       speaker: data.speaker || 'Manual',
       timestamp: data.timestamp,
-      intent_label: body.intent || 'NO_ACTION'
+      intent_label: intent
     });
-    
-    return actionUpdate;
+
+    // Step 2: If actionable, invoke executor directly
+    if (intent !== 'NO_ACTION' && confidence >= 0.75) {
+      const executorPayload = {
+        meeting_id: data.meeting_id,
+        intent: intent,
+        extracted_action: body.extracted_action || data.transcript_chunk,
+        entities: body.entities || {}
+      };
+
+      // Send action card to frontend IMMEDIATELY (before async executor)
+      event.sender.send('action-update', {
+        meeting_id: data.meeting_id,
+        action_id: Date.now().toString(),
+        action_type: intent,
+        status: 'PENDING',
+        result: JSON.stringify(body),
+        created_at: new Date().toISOString()
+      });
+
+      // Fire executor async — don't await
+      lambda.invoke({
+        FunctionName: 'ExecProxyLambdas-ExecutorHandler9E4320CC-abH97KjjunvD',
+        InvocationType: 'Event',
+        Payload: JSON.stringify(executorPayload)
+      }).promise()
+        .then(() => console.log('Executor invoked for:', intent))
+        .catch(e => console.error('Executor error:', e));
+    }
+
+    return { intent, confidence };
   } catch(e) {
     console.error('classify-text error:', e);
     return { error: e.message };
