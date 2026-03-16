@@ -187,101 +187,41 @@ class CalendarUIAgent:
                 steps_completed = 1
                 logger.info(f"Step 1 complete ({result.metadata.num_steps_executed} steps)")
 
-                # ── Step 2: Open create event dialog ─────────────────────────
-                logger.info("Step 2: Opening create event form")
-                result = nova.act(
-                    "Click the '+ Create' or 'Create' button to start "
-                    "creating a new event. If a quick-add popover appears, "
-                    "click 'More options' to open the full event editor."
+                # ── Step 2: Create the Event (Single Multi-Step Instruction) ─
+                logger.info("Step 2: Creating the entire event")
+                
+                safe_title = title.replace('"', '\\"').replace("'", "\\'")
+                safe_desc = description.replace('"', '\\"').replace("'", "\\'") if description else ""
+                attendees_str = ", ".join(attendees) if attendees else ""
+                
+                comprehensive_prompt = (
+                    "Create a new Google Calendar event with the following details:\n"
+                    f"- Title: {safe_title}\n"
+                    f"- Start Date: {start['date']}\n"
+                    f"- Start Time: {start['time']}\n"
+                    f"- End Date: {end['date']}\n"
+                    f"- End Time: {end['time']}\n"
                 )
+                
+                if safe_desc:
+                    comprehensive_prompt += f"- Description: {safe_desc}\n"
+                if attendees_str:
+                    comprehensive_prompt += f"- Guests/Attendees: {attendees_str} (press Enter after each)\n"
+                if location:
+                    comprehensive_prompt += f"- Location: {location}\n"
+                    
+                comprehensive_prompt += (
+                    "\nInstructions:\n"
+                    "1. Click the '+ Create' or 'Create' button, then click 'Event'. If a quick-add popover appears, click 'More options' to open the full editor.\n"
+                    "2. Fill in the title, dates, and times exactly as specified above.\n"
+                    "3. Add the description, guests, and location if they were provided above.\n"
+                    "4. Finally, click the 'Save' button. Do NOT click Cancel. If asked about sending invitations to guests, click 'Send'.\n"
+                    "5. Return once the event is saved and you are back on the main calendar view."
+                )
+
+                result = nova.act(comprehensive_prompt, max_steps=60)
                 steps_completed = 2
                 logger.info(f"Step 2 complete ({result.metadata.num_steps_executed} steps)")
-
-                # ── Step 3: Fill in title ────────────────────────────────────
-                logger.info(f"Step 3: Setting title to '{title}'")
-                safe_title = title.replace('"', '\\"').replace("'", "\\'")
-                result = nova.act(
-                    f"In the event editor, click on the title field "
-                    f"(which may say 'Add title' or be empty) and type "
-                    f"exactly: {safe_title}"
-                )
-                steps_completed = 3
-                logger.info(f"Step 3 complete ({result.metadata.num_steps_executed} steps)")
-
-                # ── Step 4: Set start date and time ──────────────────────────
-                logger.info(f"Step 4: Setting start to {start['date']} at {start['time']}")
-                result = nova.act(
-                    f"Set the start date to {start['date']} and the start "
-                    f"time to {start['time']}. Click on the start date field "
-                    f"and change it, then click on the start time field and "
-                    f"set it to {start['time']}."
-                )
-                steps_completed = 4
-                logger.info(f"Step 4 complete ({result.metadata.num_steps_executed} steps)")
-
-                # ── Step 5: Set end date and time ────────────────────────────
-                logger.info(f"Step 5: Setting end to {end['date']} at {end['time']}")
-                result = nova.act(
-                    f"Set the end date to {end['date']} and the end time "
-                    f"to {end['time']}. Click on the end date field and "
-                    f"change it if it differs from the start date, then "
-                    f"click on the end time field and set it to {end['time']}."
-                )
-                steps_completed = 5
-                logger.info(f"Step 5 complete ({result.metadata.num_steps_executed} steps)")
-
-                # ── Step 6: Add description (optional) ───────────────────────
-                if description:
-                    logger.info("Step 6: Adding description")
-                    safe_desc = description.replace('"', '\\"').replace("'", "\\'")
-                    result = nova.act(
-                        f"Click on the description field (it may say "
-                        f"'Add description' or 'Description') and type: "
-                        f"{safe_desc}"
-                    )
-                    steps_completed = 6
-                    logger.info(f"Step 6 complete ({result.metadata.num_steps_executed} steps)")
-                else:
-                    steps_completed = 6
-                    logger.info("Step 6: No description, skipping")
-
-                # ── Step 7: Add attendees (optional) ─────────────────────────
-                if attendees and len(attendees) > 0:
-                    logger.info(f"Step 7: Adding {len(attendees)} attendees")
-                    attendees_str = ", ".join(attendees)
-                    result = nova.act(
-                        f"Click on 'Add guests' or the attendees/guests field. "
-                        f"Add each of these email addresses: {attendees_str}. "
-                        f"Type each email and press Enter after each one."
-                    )
-                    steps_completed = 7
-                    logger.info(f"Step 7 complete ({result.metadata.num_steps_executed} steps)")
-                else:
-                    steps_completed = 7
-                    logger.info("Step 7: No attendees, skipping")
-
-                # ── Step 8: Add location (optional) ──────────────────────────
-                if location:
-                    logger.info(f"Step 8: Adding location '{location}'")
-                    result = nova.act(
-                        f"Click on 'Add location' or the location field "
-                        f"and type: {location}"
-                    )
-                    steps_completed = 8
-                    logger.info(f"Step 8 complete ({result.metadata.num_steps_executed} steps)")
-                else:
-                    steps_completed = 8
-
-                # ── Step 9: Save the event ───────────────────────────────────
-                logger.info("Step 9: Saving the event")
-                result = nova.act(
-                    "Click the 'Save' button to save the event. "
-                    "Do NOT click 'Cancel' or 'Discard'. "
-                    "If asked about sending invitations to guests, "
-                    "click 'Send' or 'Don't send' — either is fine."
-                )
-                steps_completed = 9
-                logger.info(f"Step 9 complete ({result.metadata.num_steps_executed} steps)")
 
                 # ── Step 10: Extract event confirmation ──────────────────────
                 logger.info("Step 10: Extracting event confirmation")

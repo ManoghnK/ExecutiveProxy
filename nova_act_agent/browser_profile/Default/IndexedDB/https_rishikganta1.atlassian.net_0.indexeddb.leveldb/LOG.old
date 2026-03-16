@@ -1,21 +1,18 @@
-2026/03/16-02:05:40.753 54e40 Reusing MANIFEST C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\IndexedDB\https_rishikganta1.atlassian.net_0.indexeddb.leveldb/MANIFEST-000001
-2026/03/16-02:05:40.755 54e40 Recovering log #14
-2026/03/16-02:05:40.796 54e40 Level-0 table #18: started
-2026/03/16-02:05:40.837 54e40 Level-0 table #18: 1951688 bytes OK
-2026/03/16-02:05:40.841 54e40 Delete type=0 #14
-2026/03/16-02:05:42.496 54e40 Moved #18 to level-1 1951688 bytes OK: files[ 0 1 1 0 0 0 0 ]
-2026/03/16-02:05:42.839 524f0 Compacting 1@1 + 1@2 files
-2026/03/16-02:05:42.871 524f0 Generated table #20@1: 2957 keys, 218851 bytes
-2026/03/16-02:05:42.871 524f0 Compacted 1@1 + 1@2 files => 218851 bytes
-2026/03/16-02:05:42.872 524f0 compacted to: files[ 0 0 1 0 0 0 0 ]
-2026/03/16-02:07:30.402 55598 Level-0 table #22: started
-2026/03/16-02:07:30.483 55598 Level-0 table #22: 1948814 bytes OK
-2026/03/16-02:07:30.489 55598 Delete type=2 #16
-2026/03/16-02:07:30.493 55598 Delete type=2 #18
-2026/03/16-02:07:30.493 55598 Delete type=0 #19
-2026/03/16-02:07:53.803 55598 Compacting 1@1 + 1@2 files
-2026/03/16-02:07:53.838 55598 Generated table #23@1: 3524 keys, 262271 bytes
-2026/03/16-02:07:53.838 55598 Compacted 1@1 + 1@2 files => 262271 bytes
-2026/03/16-02:07:53.841 55598 compacted to: files[ 0 0 1 0 0 0 0 ]
-2026/03/16-02:07:53.843 55598 Delete type=2 #20
-2026/03/16-02:07:53.843 55598 Delete type=2 #22
+2026/03/16-04:43:29.478 5b8a4 Reusing MANIFEST C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\IndexedDB\https_rishikganta1.atlassian.net_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/16-04:43:29.480 5b8a4 Recovering log #28
+2026/03/16-04:43:29.484 5b8a4 Reusing old log C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\IndexedDB\https_rishikganta1.atlassian.net_0.indexeddb.leveldb/000028.log 
+2026/03/16-04:43:30.953 5531c Compacting 1@1 + 1@2 files
+2026/03/16-04:43:31.003 5531c Generated table #31@1: 4811 keys, 395057 bytes
+2026/03/16-04:43:31.003 5531c Compacted 1@1 + 1@2 files => 395057 bytes
+2026/03/16-04:43:31.004 5531c compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/03/16-04:44:55.424 5531c Level-0 table #33: started
+2026/03/16-04:44:55.469 5531c Level-0 table #33: 1838300 bytes OK
+2026/03/16-04:44:55.473 5531c Delete type=2 #27
+2026/03/16-04:44:55.473 5531c Delete type=0 #28
+2026/03/16-04:44:55.474 5531c Delete type=2 #29
+2026/03/16-04:44:55.909 5531c Compacting 1@1 + 1@2 files
+2026/03/16-04:44:55.943 5531c Generated table #34@1: 5231 keys, 383595 bytes
+2026/03/16-04:44:55.944 5531c Compacted 1@1 + 1@2 files => 383595 bytes
+2026/03/16-04:44:55.944 5531c compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/03/16-04:44:55.945 5531c Delete type=2 #31
+2026/03/16-04:44:55.945 5531c Delete type=2 #33

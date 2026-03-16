@@ -88,13 +88,13 @@
       );
     }
 
-    // ── ACTION CARDS ─────────────────────────────────────────
     function ActionCards({ actions }) {
       const STATUS_ICON = {
-        PENDING:   <span style={{color:"#fbbf24"}}>⟳</span>,
-        COMPLETED: <span style={{color:"#22c55e"}}>✓</span>,
-        FAILED:    <span style={{color:"#ef4444"}}>✗</span>,
-        HANDOFF:   <span style={{color:"#00d4ff"}}>→</span>,
+        PENDING:     <span style={{color:"#fbbf24"}}>⏳</span>,
+        IN_PROGRESS: <span style={{color:"#00d4ff", display:"inline-block"}}>🔄</span>,
+        COMPLETED:   <span style={{color:"#22c55e"}}>✅</span>,
+        FAILED:      <span style={{color:"#ef4444"}}>❌</span>,
+        HANDOFF:     <span style={{color:"#00d4ff"}}>→</span>,
       };
 
       return (
@@ -114,14 +114,22 @@
               [...actions].reverse().filter(a => a && a.action_type).map((a, i) => {
                 const colors = INTENT_COLORS[a.action_type] || INTENT_COLORS.NO_ACTION;
                 let resultPreview = "";
+                let hasError = a.status === 'FAILED';
+                
                 try {
                   const r = typeof a.result === "string" ? JSON.parse(a.result) : a.result;
-                  resultPreview = r.ticket_id || r.risk_level || r.title || "";
-                } catch(e) {}
+                  if (hasError) {
+                      resultPreview = r ? (r.error || r) : (a.status_message || "");
+                  } else {
+                      resultPreview = r ? (r.ticket_id || r.key || r.risk_level || r.title || "") : "";
+                  }
+                } catch(e) {
+                  resultPreview = hasError ? a.result : "";
+                }
 
                 return (
                   <div key={i} className="slide-in" style={{
-                    background:"#1a1a1a", border:`1px solid ${colors.border}`,
+                    background:"#1a1a1a", border:`1px solid ${a.status === 'IN_PROGRESS' ? '#00d4ff' : colors.border}`,
                     borderRadius:8, padding:"10px 14px", marginBottom:8
                   }}>
                     <div style={{ display:"flex", justifyContent:"space-between",
@@ -133,15 +141,20 @@
                       }}>
                         {colors.label}
                       </span>
-                      <span style={{ fontSize:16 }}>
-                        {STATUS_ICON[a.status] || "?"}
+                      <span style={{ fontSize:16 }} className={a.status === 'IN_PROGRESS' ? 'animate-spin' : ''}>
+                        {STATUS_ICON[a.status] || STATUS_ICON['PENDING']}
                       </span>
                     </div>
                     <div style={{ fontSize:12, color:"#ccc", marginBottom:4 }}>
                       {a.action_type}
                     </div>
+                    {a.status_message && (
+                      <div style={{ fontSize:11, color: a.status === 'IN_PROGRESS' ? '#00d4ff' : '#aaa', marginBottom:4 }}>
+                        {a.status_message}
+                      </div>
+                    )}
                     {resultPreview && (
-                      <div style={{ fontSize:11, color:"#00d4ff" }}>
+                      <div style={{ fontSize:11, color: hasError ? '#ef4444' : '#00d4ff' }}>
                         {resultPreview}
                       </div>
                     )}
@@ -271,7 +284,15 @@
           });
           window.electronAPI.onActionUpdate((data) => {
             if (!data) return;
-            setActions(prev => [...prev, data]);
+            setActions(prev => {
+              const index = prev.findIndex(a => a.action_id === data.action_id);
+              if (index >= 0) {
+                const newActions = [...prev];
+                newActions[index] = data;
+                return newActions;
+              }
+              return [...prev, data];
+            });
             if (data.action_type === "RISK_MATRIX" && data.result) {
               try {
                 const r = typeof data.result === "string" 
@@ -317,11 +338,8 @@
           speaker: "Manual",
           timestamp: new Date().toISOString()
         };
-        // Add to transcript immediately
-        setTranscripts(prev => [...prev, {
-          text: textInput, speaker: "Manual",
-          timestamp: chunk.timestamp, intent_label: "NO_ACTION"
-        }]);
+        // The transcript will be added to the UI when it comes back from the backend
+        // via `window.electronAPI.onTranscriptChunk`, so we don't preemptively add it here.
         setTextInput("");
         // Send to classifier via IPC
         if (window.electronAPI) {
