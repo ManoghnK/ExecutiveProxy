@@ -1,18 +1,3 @@
-2026/03/16-04:43:29.478 5b8a4 Reusing MANIFEST C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\IndexedDB\https_rishikganta1.atlassian.net_0.indexeddb.leveldb/MANIFEST-000001
-2026/03/16-04:43:29.480 5b8a4 Recovering log #28
-2026/03/16-04:43:29.484 5b8a4 Reusing old log C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\IndexedDB\https_rishikganta1.atlassian.net_0.indexeddb.leveldb/000028.log 
-2026/03/16-04:43:30.953 5531c Compacting 1@1 + 1@2 files
-2026/03/16-04:43:31.003 5531c Generated table #31@1: 4811 keys, 395057 bytes
-2026/03/16-04:43:31.003 5531c Compacted 1@1 + 1@2 files => 395057 bytes
-2026/03/16-04:43:31.004 5531c compacted to: files[ 0 0 1 0 0 0 0 ]
-2026/03/16-04:44:55.424 5531c Level-0 table #33: started
-2026/03/16-04:44:55.469 5531c Level-0 table #33: 1838300 bytes OK
-2026/03/16-04:44:55.473 5531c Delete type=2 #27
-2026/03/16-04:44:55.473 5531c Delete type=0 #28
-2026/03/16-04:44:55.474 5531c Delete type=2 #29
-2026/03/16-04:44:55.909 5531c Compacting 1@1 + 1@2 files
-2026/03/16-04:44:55.943 5531c Generated table #34@1: 5231 keys, 383595 bytes
-2026/03/16-04:44:55.944 5531c Compacted 1@1 + 1@2 files => 383595 bytes
-2026/03/16-04:44:55.944 5531c compacted to: files[ 0 0 1 0 0 0 0 ]
-2026/03/16-04:44:55.945 5531c Delete type=2 #31
-2026/03/16-04:44:55.945 5531c Delete type=2 #33
+2026/03/16-05:11:41.406 17318 Reusing MANIFEST C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\IndexedDB\https_rishikganta1.atlassian.net_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/16-05:11:41.408 17318 Recovering log #32
+2026/03/16-05:11:41.416 17318 Reusing old log C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\IndexedDB\https_rishikganta1.atlassian.net_0.indexeddb.leveldb/000032.log 

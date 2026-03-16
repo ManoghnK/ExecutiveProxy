@@ -169,23 +169,15 @@ class CalendarUIAgent:
         steps_completed = 0
         metadata = {}
 
+        start_url = f"{self.calendar_url.rstrip('/')}/r/eventedit" if "calendar.google.com" in self.calendar_url else self.calendar_url
         try:
             with NovaAct(
-                starting_page=self.calendar_url,
+                starting_page=start_url,
                 nova_act_api_key=self.api_key,
                 headless=self.headless,
                 user_data_dir=self.user_data_dir,
                 clone_user_data_dir=False,  # ← CRITICAL: Reuse profile instead of cloning
             ) as nova:
-
-                # ── Step 1: Wait for calendar to load ────────────────────────
-                logger.info("Step 1: Waiting for Google Calendar to load")
-                result = nova.act(
-                    "Wait for Google Calendar to fully load. "
-                    "You should see the calendar view with days and times."
-                )
-                steps_completed = 1
-                logger.info(f"Step 1 complete ({result.metadata.num_steps_executed} steps)")
 
                 # ── Step 2: Create the Event (Single Multi-Step Instruction) ─
                 logger.info("Step 2: Creating the entire event")
@@ -209,13 +201,16 @@ class CalendarUIAgent:
                     comprehensive_prompt += f"- Guests/Attendees: {attendees_str} (press Enter after each)\n"
                 if location:
                     comprehensive_prompt += f"- Location: {location}\n"
+                from datetime import datetime
+                current_date = datetime.now().strftime("%B %d, %Y")
+                comprehensive_prompt += f"- Current Date: {current_date}\n"
                     
                 comprehensive_prompt += (
                     "\nInstructions:\n"
-                    "1. Click the '+ Create' or 'Create' button, then click 'Event'. If a quick-add popover appears, click 'More options' to open the full editor.\n"
-                    "2. Fill in the title, dates, and times exactly as specified above.\n"
+                    "1. You are already on the full-page event editor. Do NOT click the '+ Create' button.\n"
+                    "2. Fill in the title, dates, and times exactly as specified above in the form.\n"
                     "3. Add the description, guests, and location if they were provided above.\n"
-                    "4. Finally, click the 'Save' button. Do NOT click Cancel. If asked about sending invitations to guests, click 'Send'.\n"
+                    "4. Finally, click the 'Save' button at the top to secure the event. If asked about sending invitations to guests, click 'Send'.\n"
                     "5. Return once the event is saved and you are back on the main calendar view."
                 )
 
