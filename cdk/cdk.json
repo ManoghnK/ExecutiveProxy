@@ -1,5 +1,5 @@
 {
-  "app": "..\\\\.venv\\\\Scripts\\\\python.exe app.py",
+  "app": "..\\\\venv\\\\Scripts\\\\python.exe app.py",
   "watch": {
     "include": ["**"],
     "exclude": ["README.md", "cdk*.json", "**/__pycache__/**", "**/*.egg-info/**"]

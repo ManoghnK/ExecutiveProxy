@@ -1,3 +1,5 @@
-2026/03/15-05:52:26.874 8950 Reusing MANIFEST D:\Projects\ExecutiveProxy\nova_act_agent\browser_profile\Default\Local Storage\leveldb/MANIFEST-000001
-2026/03/15-05:52:26.877 8950 Recovering log #3
-2026/03/15-05:52:26.878 8950 Reusing old log D:\Projects\ExecutiveProxy\nova_act_agent\browser_profile\Default\Local Storage\leveldb/000003.log 
+2026/03/16-02:05:38.134 5515c Reusing MANIFEST C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/03/16-02:05:38.145 5515c Recovering log #3
+2026/03/16-02:05:38.146 5515c Level-0 table #3: started
+2026/03/16-02:05:38.161 5515c Level-0 table #3: 15496 bytes OK
+2026/03/16-02:05:38.178 5515c Delete type=0 #3

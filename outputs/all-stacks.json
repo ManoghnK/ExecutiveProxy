@@ -1,27 +1,27 @@
 {
   "ExecProxyDynamo": {
-    "ExportsOutputFnGetAttMeetingStateC22498ACArn1ECF038B": "arn:aws:dynamodb:us-east-1:341083262352:table/MeetingState",
+    "ExportsOutputFnGetAttMeetingStateC22498ACArn1ECF038B": "arn:aws:dynamodb:us-east-1:374199896731:table/MeetingState",
     "ActionTableName": "ActionLog",
-    "MeetingTableArn": "arn:aws:dynamodb:us-east-1:341083262352:table/MeetingState",
-    "ExportsOutputFnGetAttActionLogE54282FEStreamArn9964CDD4": "arn:aws:dynamodb:us-east-1:341083262352:table/ActionLog/stream/2026-03-15T05:34:35.209",
-    "ExportsOutputFnGetAttMeetingStateC22498ACStreamArnCBD4FB91": "arn:aws:dynamodb:us-east-1:341083262352:table/MeetingState/stream/2026-03-15T05:34:36.045",
-    "ActionTableArn": "arn:aws:dynamodb:us-east-1:341083262352:table/ActionLog",
+    "MeetingTableArn": "arn:aws:dynamodb:us-east-1:374199896731:table/MeetingState",
+    "ExportsOutputFnGetAttActionLogE54282FEStreamArn9964CDD4": "arn:aws:dynamodb:us-east-1:374199896731:table/ActionLog/stream/2026-03-16T05:17:36.633",
+    "ExportsOutputFnGetAttMeetingStateC22498ACStreamArnCBD4FB91": "arn:aws:dynamodb:us-east-1:374199896731:table/MeetingState/stream/2026-03-16T05:17:35.405",
+    "ActionTableArn": "arn:aws:dynamodb:us-east-1:374199896731:table/ActionLog",
     "MeetingTableName": "MeetingState",
-    "ActionTableStreamArn": "arn:aws:dynamodb:us-east-1:341083262352:table/ActionLog/stream/2026-03-15T05:34:35.209",
-    "MeetingTableStreamArn": "arn:aws:dynamodb:us-east-1:341083262352:table/MeetingState/stream/2026-03-15T05:34:36.045",
+    "ActionTableStreamArn": "arn:aws:dynamodb:us-east-1:374199896731:table/ActionLog/stream/2026-03-16T05:17:36.633",
+    "MeetingTableStreamArn": "arn:aws:dynamodb:us-east-1:374199896731:table/MeetingState/stream/2026-03-16T05:17:35.405",
     "ExportsOutputRefMeetingStateC22498AC8ADEEEC6": "MeetingState",
-    "ExportsOutputFnGetAttActionLogE54282FEArn5AB236AC": "arn:aws:dynamodb:us-east-1:341083262352:table/ActionLog",
+    "ExportsOutputFnGetAttActionLogE54282FEArn5AB236AC": "arn:aws:dynamodb:us-east-1:374199896731:table/ActionLog",
     "ExportsOutputRefActionLogE54282FED7E45118": "ActionLog"
   },
-  "ExecProxyLambdas": {
-    "RagFunctionName": "ExecProxyLambdas-RagHandler014AF978-qXOwhsaB0E6j",
-    "ExecutorFunctionName": "ExecProxyLambdas-ExecutorHandler9E4320CC-pAbBs21WvzCD",
-    "ClassifierFunctionName": "ExecProxyLambdas-ClassifierHandler36143077-IIhC1AYZnb3h",
-    "TranscribeFunctionName": "ExecProxyLambdas-TranscribeHandler8E4C16AC-DDTcF1AHHdJ9"
-  },
   "ExecProxyAppSync": {
-    "AppSyncApiUrl": "https://ykzbsvijw5fm7mj2gxuaist6iy.appsync-api.us-east-1.amazonaws.com/graphql",
-    "AppSyncApiKey": "da2-24tchnt7j5gbpp65ge3tra2lxe",
-    "AppSyncApiId": "plfsv7aecjeu3kozqrncl42q5m"
+    "AppSyncApiUrl": "https://3eka36i3zrcs7bmeih6cgtuypy.appsync-api.us-east-1.amazonaws.com/graphql",
+    "AppSyncApiKey": "da2-sq7jotd3tvaltpxvepuae2hgci",
+    "AppSyncApiId": "i4k6mfum35bevpmqoice7brmxi"
+  },
+  "ExecProxyLambdas": {
+    "RagFunctionName": "ExecProxyLambdas-RagHandler014AF978-D2T4dpp43RpY",
+    "ExecutorFunctionName": "ExecProxyLambdas-ExecutorHandler9E4320CC-LFznR4CiXZhQ",
+    "ClassifierFunctionName": "ExecProxyLambdas-ClassifierHandler36143077-xLr4bCBrl6rx",
+    "TranscribeFunctionName": "ExecProxyLambdas-TranscribeHandler8E4C16AC-xDsgsWxLuAxM"
   }
 }
