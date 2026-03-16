@@ -21,6 +21,7 @@ import sys
 import json
 import logging
 import platform
+import base64
 from typing import Optional
 from pathlib import Path
 
@@ -45,6 +46,7 @@ NOVA_ACT_API_KEY = os.environ.get("NOVA_ACT_API_KEY")
 JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "https://yourorg.atlassian.net")
 JIRA_PROJECT_KEY = os.environ.get("JIRA_PROJECT_KEY", "EP")
 JIRA_USER_EMAIL = os.environ.get("JIRA_USER_EMAIL")
+JIRA_API_TOKEN = os.environ.get("JIRA_API_TOKEN")
 JIRA_PASSWORD = os.environ.get("JIRA_PASSWORD")
 
 # Persistent browser profile directory
@@ -159,16 +161,52 @@ class JiraUIAgent:
                 steps_completed = 2
                 logger.info(f"Step 2 complete ({result.metadata.num_steps_executed} browser steps)")
 
-                # ── Step 3: Fill in summary ──────────────────────────────────
+                # ── Step 3: Fill in summary (with verification + retry) ────
                 logger.info("Step 3: Filling in summary")
-                # Escape quotes in summary for the prompt
                 safe_summary = summary.replace('"', '\\"').replace("'", "\\'")
-                result = nova.act(
-                    f"In the create issue form, click on the Summary field "
-                    f"and type exactly: {safe_summary}"
-                )
+
+                summary_filled = False
+                for attempt in range(3):
+                    if attempt > 0:
+                        logger.info(f"Step 3: Retry attempt {attempt} — Summary field was empty")
+
+                    nova.act(
+                        f"The create issue form may have just reloaded after "
+                        f"changing the project or issue type. Wait a moment for "
+                        f"the form to fully load and stabilize. "
+                        f"Now find the 'Summary' text input field — it is a "
+                        f"required field, usually the first input in the form. "
+                        f"Click directly inside the Summary input field to give "
+                        f"it focus. Clear any existing text in it. Then type "
+                        f"this exact text: {safe_summary} "
+                        f"Confirm the text appears in the Summary field."
+                    )
+
+                    # Verify the Summary field is not empty
+                    try:
+                        verify = nova.act_get(
+                            "Look at the 'Summary' text input field in the create "
+                            "issue form. What text is currently inside the Summary "
+                            "field? Return the exact text content. If the field is "
+                            "empty, return the word EMPTY."
+                        )
+                        response = (verify.response or "").strip()
+                        logger.info(f"Step 3: Summary field content: '{response}'")
+
+                        if response and response.upper() != "EMPTY":
+                            summary_filled = True
+                            break
+                    except Exception as verify_err:
+                        logger.warning(f"Step 3: Verification failed: {verify_err}")
+                        # Assume it worked if verification itself errors
+                        summary_filled = True
+                        break
+
+                if not summary_filled:
+                    logger.warning("Step 3: Summary field still empty after 3 attempts")
+
                 steps_completed = 3
-                logger.info(f"Step 3 complete ({result.metadata.num_steps_executed} browser steps)")
+                logger.info(f"Step 3 complete (filled={summary_filled})")
 
                 # ── Step 4: Fill in description ──────────────────────────────
                 if description:
@@ -237,6 +275,8 @@ class JiraUIAgent:
 
                 # ── Step 9: Extract ticket ID ────────────────────────────────
                 logger.info("Step 9: Extracting ticket ID")
+                ticket_id = None
+                ticket_url = None
                 try:
                     extract_result = nova.act_get(
                         "A Jira ticket was just created. Look for a confirmation "
@@ -247,9 +287,6 @@ class JiraUIAgent:
                         f"'{self.project_key}-123') and the full URL to the ticket."
                     )
                     steps_completed = 9
-
-                    ticket_id = None
-                    ticket_url = None
 
                     if extract_result.response:
                         response_text = extract_result.response
@@ -276,6 +313,21 @@ class JiraUIAgent:
                     # Ticket was likely created but we couldn't extract the ID
                     ticket_id = "CREATED_ID_UNKNOWN"
                     ticket_url = self.jira_url
+                    metadata = {}
+
+                # ── Step 10: Move ticket to active sprint (REST API) ─────────
+                if ticket_id and ticket_id != "CREATED_ID_UNKNOWN":
+                    logger.info("Step 10: Moving ticket to active sprint via REST API")
+                    try:
+                        self._move_to_active_sprint(ticket_id)
+                        steps_completed = 10
+                        logger.info("Step 10 complete: Ticket moved to active sprint")
+                    except Exception as sprint_err:
+                        logger.warning(f"Could not move ticket to sprint: {sprint_err}")
+                        steps_completed = 10
+                else:
+                    logger.info("Step 10: Skipping sprint move — ticket ID unknown")
+                    steps_completed = 10
 
                 logger.info(
                     f"Ticket creation complete: id={ticket_id}, url={ticket_url}"
@@ -322,6 +374,85 @@ class JiraUIAgent:
                 pass
 
             return self._error_result(error_msg, steps_completed)
+
+    def _move_to_active_sprint(self, ticket_id: str) -> None:
+        """Move a ticket into the active sprint using the Jira REST API."""
+        import requests
+
+        email = JIRA_USER_EMAIL
+        token = JIRA_API_TOKEN
+        if not email or not token:
+            logger.warning(
+                "JIRA_USER_EMAIL or JIRA_API_TOKEN not set — skipping sprint move"
+            )
+            return
+
+        auth_str = base64.b64encode(f"{email}:{token}".encode()).decode()
+        headers = {
+            "Authorization": f"Basic {auth_str}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        # 1. Find the board for this project
+        boards_url = (
+            f"{self.jira_url}/rest/agile/1.0/board"
+            f"?projectKeyOrId={self.project_key}&type=scrum"
+        )
+        resp = requests.get(boards_url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        boards = resp.json().get("values", [])
+
+        if not boards:
+            # Try kanban boards as fallback
+            boards_url = (
+                f"{self.jira_url}/rest/agile/1.0/board"
+                f"?projectKeyOrId={self.project_key}"
+            )
+            resp = requests.get(boards_url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            boards = resp.json().get("values", [])
+
+        if not boards:
+            logger.warning("No boards found for project — cannot move to sprint")
+            return
+
+        board_id = boards[0]["id"]
+        logger.info(f"Found board: id={board_id}, name={boards[0].get('name')}")
+
+        # 2. Get the active sprint for this board
+        sprints_url = (
+            f"{self.jira_url}/rest/agile/1.0/board/{board_id}/sprint"
+            f"?state=active"
+        )
+        resp = requests.get(sprints_url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        sprints = resp.json().get("values", [])
+
+        if not sprints:
+            # No active sprint — try to find a future sprint
+            sprints_url = (
+                f"{self.jira_url}/rest/agile/1.0/board/{board_id}/sprint"
+                f"?state=future"
+            )
+            resp = requests.get(sprints_url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            sprints = resp.json().get("values", [])
+
+        if not sprints:
+            logger.warning("No active or future sprint found — ticket stays in backlog")
+            return
+
+        sprint_id = sprints[0]["id"]
+        sprint_name = sprints[0].get("name", "unknown")
+        logger.info(f"Target sprint: id={sprint_id}, name={sprint_name}")
+
+        # 3. Move the issue into the sprint
+        move_url = f"{self.jira_url}/rest/agile/1.0/sprint/{sprint_id}/issue"
+        payload = {"issues": [ticket_id]}
+        resp = requests.post(move_url, headers=headers, json=payload, timeout=10)
+        resp.raise_for_status()
+        logger.info(f"Ticket {ticket_id} moved to sprint '{sprint_name}'")
 
     def _error_result(self, error: str, steps_completed: int = 0) -> dict:
         """Build a standardized error result."""
