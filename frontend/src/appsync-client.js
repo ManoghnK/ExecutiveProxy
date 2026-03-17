@@ -24,8 +24,8 @@ export const subscribeToMeeting = (meetingId, onTranscript, onAction) => {
     // Subscription for Transcript Updates
     const transcriptSub = client.graphql({
         query: `
-            subscription OnMeetingUpdate($meeting_id: String!) {
-                onMeetingUpdate(meeting_id: $meeting_id) {
+            subscription SubscribeToMeeting($meeting_id: ID!) {
+                subscribeToMeeting(meeting_id: $meeting_id) {
                     meeting_id
                     timestamp
                     speaker
@@ -38,8 +38,8 @@ export const subscribeToMeeting = (meetingId, onTranscript, onAction) => {
         variables: { meeting_id: meetingId }
     }).subscribe({
         next: ({ data }) => {
-            if (data.onMeetingUpdate) {
-                onTranscript(data.onMeetingUpdate);
+            if (data.subscribeToMeeting) {
+                onTranscript(data.subscribeToMeeting);
             }
         },
         error: (error) => console.error('Transcript subscription error:', error)
@@ -48,8 +48,8 @@ export const subscribeToMeeting = (meetingId, onTranscript, onAction) => {
     // Subscription for Action Logs
     const actionSub = client.graphql({
         query: `
-            subscription OnActionLog($meeting_id: String!) {
-                onActionLog(meeting_id: $meeting_id) {
+            subscription SubscribeToActions($meeting_id: ID!) {
+                subscribeToActions(meeting_id: $meeting_id) {
                     meeting_id
                     action_id
                     action_type
@@ -63,8 +63,8 @@ export const subscribeToMeeting = (meetingId, onTranscript, onAction) => {
         variables: { meeting_id: meetingId }
     }).subscribe({
         next: ({ data }) => {
-            if (data.onActionLog) {
-                onAction(data.onActionLog);
+            if (data.subscribeToActions) {
+                onAction(data.subscribeToActions);
             }
         },
         error: (error) => console.error('Action subscription error:', error)

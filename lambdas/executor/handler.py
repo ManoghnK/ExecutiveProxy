@@ -69,8 +69,8 @@ TOOLS = [
                     "properties": {
                         "title": {"type": "string"},
                         "description": {"type": "string", "nullable": True},
-                        "start_datetime": {"type": "string", "description": "ISO8601 string"},
-                        "end_datetime": {"type": "string", "description": "ISO8601 string"},
+                        "start_datetime": {"type": "string", "description": "Event start in ISO8601 format (e.g. 2026-03-19T14:00:00). Must be in the future."},
+                        "end_datetime": {"type": "string", "description": "Event end in ISO8601 format (e.g. 2026-03-19T15:00:00). Must be after start_datetime."},
                         "attendees": {"type": "array", "items": {"type": "string"}},
                         "duration_minutes": {"type": "integer", "default": 30}
                     },
@@ -104,7 +104,18 @@ def log_action(meeting_id: str, action_type: str, status: str, payload: dict, re
 def invoke_tool_use(intent: str, extracted_action: str, entities: dict) -> dict:
     """Invokes Nova Pro with tool definitions to extract structured parameters."""
     
-    system_prompt = [{"text": f"You are an executive assistant. Your goal is to extract parameters for the '{intent}' action from the user request."}]
+    from datetime import datetime, timezone
+    current_datetime = datetime.now(timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
+    
+    prompt_text = (
+        f"Today's current date and time is: {current_datetime}. "
+        "When the user refers to relative dates like 'Thursday', 'tomorrow', 'next week', or 'in 2 hours', "
+        "always resolve them relative to this current date and time. All generated datetimes must be in the future. "
+        "Never default to past dates.\n\n"
+        f"You are an executive assistant. Your goal is to extract parameters for the '{intent}' action from the user request."
+    )
+    
+    system_prompt = [{"text": prompt_text}]
     
     user_message = f"""
     Action: {extracted_action}
@@ -156,7 +167,7 @@ def execute_jira_nova_act(tool_input: dict) -> dict:
             sys.path.insert(0, os.path.abspath(agent_path))
             sys_path_added = True
 
-        from jira_agent import create_ticket
+        from nova_act_agent.jira_agent import create_ticket
         result = create_ticket(
             summary=tool_input.get("summary", "Untitled"),
             description=tool_input.get("description", ""),
@@ -301,7 +312,7 @@ def execute_calendar_nova_act(tool_input: dict) -> dict:
         if os.path.exists(agent_path) and agent_path not in sys.path:
             sys.path.insert(0, os.path.abspath(agent_path))
 
-        from calendar_agent import create_event
+        from nova_act_agent.calendar_agent import create_event
         result = create_event(
             title=tool_input.get("title", "Untitled Event"),
             start_time=tool_input.get("start_time") or tool_input.get("start_datetime", ""),
@@ -310,6 +321,8 @@ def execute_calendar_nova_act(tool_input: dict) -> dict:
             attendees=tool_input.get("attendees"),
             location=tool_input.get("location"),
         )
+        # Embed the tool_input in the response so tests can extract the resolved start_datetime
+        result["data"] = tool_input
         return result
 
     except ImportError as e:
@@ -461,3 +474,5 @@ if __name__ == "__main__":
             print("Response:", json.dumps(res, indent=2))
         except Exception as e:
             print(f"Test failed: {e}")
+
+

@@ -2,7 +2,7 @@
 .env
 .env.*
 !.env.example
-executiveproxy-490404-d750367d7748.json
+executiveproxy-81469e743715.json
 
 # Python
 venv/
@@ -35,3 +35,15 @@ frontend/out/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Nova Act Browser Profile (User Data & Cache)
+nova_act_agent/browser_profile/
+
+# Python Virtual Environments
+.venv/
+
+# Project Outputs & Temp Logs
+outputs/
+test_*.txt
+*.log
+

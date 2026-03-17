@@ -183,9 +183,12 @@ TRANSCRIBE_LAMBDA_URL=      # Lambda Function URL for transcribe_handler
 - [x] Electron Frontend scaffold — React + AppSync subscriptions + mic capture pipeline
 - [x] Refactor frontend to use AWS SDK for direct Lambda invocation (bypass SCPs)
 - [x] Fix Jira Integration — Resolved 400 Bad Request by correcting JIRA_PROJECT_KEY to 'SCRUM' and validating payload
+- [x] Fix Calendar Date Bug — Injected current datetime into Executor's Nova Pro system prompt to anchor relative date resolution (was defaulting to 2023)
+- [x] Fix Local Executor Bridge — Resolved Python `.env` UTF-16 encoding crash, restored AWS SSO session inheritance in subprocess, and corrected Python namespace resolution (`nova_act_agent`).
+- [x] Secure Workstation — Updated `.gitignore` to prevent committing local Nova Act UI profile caches (`browser_profile/`) and session logs.
 
 ## In Progress
-- [ ] Integration Testing — End-to-end voice to action validation
+- [x] Integration Testing — End-to-end voice to action validation (Local executor pipe tested successfully)
 - [ ] Polish UI — Add real-time risk visualization
 
 ## Known Blockers
@@ -218,3 +221,4 @@ TRANSCRIBE_LAMBDA_URL=      # Lambda Function URL for transcribe_handler
 22. Jira Rest API V3 implementation — requires `Atlassian Document Format` (ADF) for the descriptions; simple text is rejected with 400 Bad Request. Executor now handles this construction.
 23. Local Executor Bridge (`local_executor.py`) — The frontend spawns a local Python subprocess to execute Nova Act UI agents (like Jira and Calendar) locally on the user's machine when `NOVA_ACT_ENABLED` is true. Real-time status updates are emitted via `stdout` JSON lines and displayed in the React UI, while the remote AppSync subscriptions are ignored to prevent duplicate action cards.
 24. Nova Act Agent Optimizations — Complex prompts combining multiple fields (summary, description, assignees) are used in a single `nova.act()` call for reliability. The calendar agent bypasses brittle pop-ups by navigating directly to the `/r/eventedit` URL, and step limits (`max_steps`) are increased to 60.
+25. Executor system prompt includes dynamic current datetime — Nova Pro requires explicit date anchoring to resolve relative references ("Thursday", "tomorrow") correctly; without it, dates default to training-era 2023.

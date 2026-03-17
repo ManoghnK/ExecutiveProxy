@@ -269,13 +269,14 @@
       const [actions, setActions]         = useState([]);
       const [riskMatrix, setRiskMatrix]   = useState(null);
       const [isLive, setIsLive]           = useState(false);
-      const [textInput, setTextInput]     = useState("");
-
+      const [textInput, setTextInput]     = useState("");      const mediaRecorderRef = useRef(null);
       // AppSync subscription via electronAPI
       useEffect(() => {
         if (window.electronAPI) {
           window.electronAPI.onTranscriptChunk((data) => {
-            if (!data || !data.text) return;
+            const textContent = data.text || data.transcript || data.transcript_chunk;
+            if (!data || !textContent) return;
+            data.text = textContent; // standardise
             data.intent_label = data.intent_label || 'NO_ACTION';
             setTranscripts(prev => [...prev, data]);
             if (data.intent_label === "POLICY_RISK" && data.risk_matrix) {
@@ -304,27 +305,39 @@
         }
       }, []);
 
-      // AUTO-TEST INJECTION
-      useEffect(() => {
-        setTimeout(() => {
-             const chunk = {
-              meeting_id: MEETING_ID,
-              transcript_chunk: "Schedule a sync with the compliance team on Friday at 2pm",
-              speaker: "Manual",
-              timestamp: new Date().toISOString()
-            };
-            if (window.electronAPI) {
-              console.log("AUTO-TEST: Sending chunk");
-              window.electronAPI.classifyText(chunk);
-            }
-        }, 5000);
-      }, []);
-
       const toggleRecording = async () => {
         if (!isLive) {
-          await window.electronAPI?.startRecording();
-          setIsLive(true);
+          try {
+            await window.electronAPI?.startRecording();
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const options = { mimeType: 'audio/webm;codecs=opus' };
+            const mediaRecorder = new MediaRecorder(stream, options);
+            mediaRecorderRef.current = mediaRecorder;
+
+            mediaRecorder.ondataavailable = async (event) => {
+              if (event.data.size > 0) {
+                const blob = event.data;
+                const buffer = await blob.arrayBuffer();
+                const base64 = btoa(new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+                
+                window.electronAPI.sendAudioChunk({
+                  meetingId: MEETING_ID,
+                  audioBase64: base64,
+                  timestamp: new Date().toISOString()
+                });
+              }
+            };
+
+            mediaRecorder.start(5000);
+            setIsLive(true);
+          } catch (err) {
+            console.error("Error accessing microphone:", err);
+            alert("Could not access microphone.");
+          }
         } else {
+          if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+          }
           await window.electronAPI?.stopRecording();
           setIsLive(false);
         }

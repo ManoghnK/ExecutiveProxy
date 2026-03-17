@@ -25,14 +25,16 @@ const App = () => {
                 const unsubscribe = subscribeToMeeting(
                     MEETING_ID,
                     (transcript) => {
-                        setTranscripts(prev => [...prev, transcript]);
+                        setTranscripts(prev => {
+                            // Deduplicate transcripts by timestamp and speaker
+                            const isDuplicate = prev.some(t => t.timestamp === transcript.timestamp && t.speaker === transcript.speaker);
+                            if (isDuplicate) return prev;
+                            return [...prev, transcript];
+                        });
                     },
                     (action) => {
-                        // Ignore action updates from AppSync because we are handling them directly
-                        // via local IPC from main.js/local_executor.py with real-time status.
-                        // Uncomment if switching back to AWS Lambda for execution.
-                        /*
                         setActions(prev => {
+                            // Deduplicate or update existing actions
                             const index = prev.findIndex(a => a.action_id === action.action_id);
                             if (index >= 0) {
                                 const newActions = [...prev];
@@ -41,7 +43,6 @@ const App = () => {
                             }
                             return [...prev, action];
                         });
-                        */
                         
                         // Update Risk Matrix if action is POLICY_RISK
                         if (action.action_type === 'POLICY_RISK' && action.result) {
@@ -61,7 +62,7 @@ const App = () => {
         });
 
         // Listen for transcript chunks from Main (processed by Lambda directly via HTTP response)
-        const cleanupTranscript = window.electronAPI.onTranscriptChunk((chunk) => {
+        window.electronAPI.onTranscriptChunk((chunk) => {
             console.log("Direct chunk:", chunk);
             if (chunk.transcript) {
                 setTranscripts(prev => [...prev, {
@@ -72,26 +73,6 @@ const App = () => {
                 }]);
             }
         });
-
-        // Listen for immediate Action updates from Main (before DynamoDB sync)
-        const cleanupAction = window.electronAPI.onActionUpdate((action) => {
-            console.log("Direct Action Update:", action);
-            setActions(prev => {
-                // Deduplicate or update existing actions
-                const index = prev.findIndex(a => a.action_id === action.action_id);
-                if (index >= 0) {
-                    const newActions = [...prev];
-                    newActions[index] = action;
-                    return newActions;
-                }
-                return [...prev, action];
-            });
-        });
-
-        return () => {
-            if (cleanupTranscript) cleanupTranscript();
-            if (cleanupAction) cleanupAction();
-        };
         
     }, []);
 

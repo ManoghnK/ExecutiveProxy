@@ -1,3 +1,6 @@
-2026/03/16-15:02:24.056 5aee8 Reusing MANIFEST C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\Session Storage/MANIFEST-000001
-2026/03/16-15:02:24.058 5aee8 Recovering log #10
-2026/03/16-15:02:24.064 5aee8 Reusing old log C:\NEU\Projects\Devpost\ExecutiveProxy\nova_act_agent\browser_profile\Default\Session Storage/000010.log 
+2026/03/16-19:56:48.447 7864 Reusing MANIFEST D:\Projects\ExecutiveProxy\nova_act_agent\browser_profile\Default\Session Storage/MANIFEST-000001
+2026/03/16-19:56:48.448 7864 Recovering log #3
+2026/03/16-19:56:48.451 7864 Reusing old log D:\Projects\ExecutiveProxy\nova_act_agent\browser_profile\Default\Session Storage/000003.log 
+2026/03/16-19:57:47.957 7864 Level-0 table #5: started
+2026/03/16-19:57:47.964 7864 Level-0 table #5: 22385 bytes OK
+2026/03/16-19:57:47.968 7864 Delete type=0 #3
